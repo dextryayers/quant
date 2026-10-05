@@ -17,6 +17,29 @@ public partial class MainWindow : Window
         {
             editor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("C#");
             editor.Text = "// loading...";
+            editor.TextArea?.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (s, e) =>
+            {
+                if (DataContext is not MainViewModel vm) return;
+                if (e.Key == Avalonia.Input.Key.Tab && vm.GhostVisible)
+                {
+                    vm.AcceptGhostCommand.Execute(null);
+                    e.Handled = true;
+                }
+                else if (e.Key == Avalonia.Input.Key.Escape && vm.GhostVisible)
+                {
+                    vm.DismissGhostCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+            editor.TextArea?.SelectionChanged += (_, __) =>
+            {
+                if (DataContext is MainViewModel vm && editor != null)
+                {
+                    var sel = editor.SelectedText ?? "";
+                    vm.SelectionText = sel.Length > 4000 ? sel[..4000] : sel;
+                    vm.HasSelection = !string.IsNullOrWhiteSpace(sel);
+                }
+            };
 
             DataContextChanged += (_, __) =>
             {

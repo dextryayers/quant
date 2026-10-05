@@ -47,6 +47,7 @@ public partial class MainViewModel : ViewModelBase
         ShowExplorer = ActiveActivity == "Explorer";
         ShowSearch = ActiveActivity == "Search" || ActiveActivity == "Symbols";
         ShowModels = ActiveActivity == "Models";
+        ShowGit = ActiveActivity == "Git";
         ShowProblemsView = BottomTab == "Problems";
         ShowTerminalView = BottomTab == "Terminal";
         ShowTasksView = BottomTab == "Tasks";
@@ -66,6 +67,26 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ApprovalCard> Approvals { get; } = new();
     public ObservableCollection<DevTask> Tasks { get; } = new();
     public ObservableCollection<TerminalSession> Terminals { get; } = new();
+    public ObservableCollection<GitFile> GitFiles { get; } = new();
+    public ObservableCollection<GitLog> GitLogs { get; } = new();
+
+    [ObservableProperty]
+    public partial string GitBranch { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string GitAhead { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string GitDiff { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string CommitMessage { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string GitLogQuery { get; set; } = "";
+
+    [ObservableProperty]
+    public partial GitFile? SelectedGitFile { get; set; }
 
     [ObservableProperty]
     public partial string ActiveModelId { get; set; } = "";
@@ -145,6 +166,24 @@ public partial class MainViewModel : ViewModelBase
     public partial string TokenMeter { get; set; } = "0 / 8192";
 
     [ObservableProperty]
+    public partial string GhostText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool GhostVisible { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string GhostWhy { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool CompleteEnabled { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string SelectionText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool HasSelection { get; set; } = false;
+
+    [ObservableProperty]
     public partial string ChatMode { get; set; } = "Edit";
 
     [ObservableProperty]
@@ -176,6 +215,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial bool ShowModels { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowGit { get; set; } = false;
 
     [ObservableProperty]
     public partial bool ShowProblemsView { get; set; } = false;
@@ -227,10 +269,12 @@ public partial class MainViewModel : ViewModelBase
         ShowExplorer = id == "Explorer";
         ShowSearch = id == "Search" || id == "Symbols";
         ShowModels = id == "Models";
+        ShowGit = id == "Git";
         _layout.State.ActiveActivity = id;
         _layout.State.SideVisible = true;
         _layout.Save();
         if (ShowModels) _ = RefreshModelsAsync();
+        if (ShowGit) _ = RefreshGitAsync();
     }
 
     [RelayCommand]
@@ -548,6 +592,7 @@ public partial class MainViewModel : ViewModelBase
             ActiveTab.Content = value;
             ActiveTab.IsDirty = true;
         }
+        ScheduleGhost();
     }
 
     // ---------- Phase 2.3 File CRUD ----------
@@ -1393,5 +1438,214 @@ public partial class MainViewModel : ViewModelBase
         term.Send(task.Command);
         task.Running = false;
         OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    // ---------- Phase 11 Git ----------
+    private async System.Threading.Tasks.Task RefreshGitAsync()
+    {
+        var root = _workspace.ActiveRoot;
+        if (root == null) return;
+        GitBranch = await GitService.Branch(root);
+        GitAhead = await GitService.AheadBehind(root);
+        var files = await GitService.Status(root);
+        GitFiles.Clear();
+        foreach (var f in files.Take(200)) GitFiles.Add(f);
+        var logs = await GitService.Log(root, GitLogQuery, 50);
+        GitLogs.Clear();
+        foreach (var l in logs) GitLogs.Add(l);
+        StatusText = $"git {GitBranch} {GitAhead}".Trim();
+        OutputLog += $"[git] {GitBranch} {GitFiles.Count} changed\n";
+    }
+
+    [RelayCommand]
+    private async Task RefreshGit()
+    {
+        await RefreshGitAsync();
+    }
+
+    [RelayCommand]
+    private async Task StageGitFile(GitFile? file)
+    {
+        file ??= SelectedGitFile;
+        var root = _workspace.ActiveRoot;
+        if (file == null || root == null) return;
+        await GitService.Stage(root, file.Path);
+        OutputLog += $"[git] stage {file.Path}\n";
+        await RefreshGitAsync();
+    }
+
+    [RelayCommand]
+    private async Task ShowGitDiff(GitFile? file)
+    {
+        file ??= SelectedGitFile;
+        var root = _workspace.ActiveRoot;
+        if (file == null || root == null) return;
+        GitDiff = await GitService.Diff(root, file.Path);
+        if (string.IsNullOrWhiteSpace(GitDiff)) GitDiff = "(no diff or binary)";
+        BottomTab = "Output";
+        BottomVisible = true;
+        ShowOutputView = true;
+        OutputLog = GitDiff;
+    }
+
+    [RelayCommand]
+    private async Task CommitNow()
+    {
+        var root = _workspace.ActiveRoot;
+        if (root == null || string.IsNullOrWhiteSpace(CommitMessage)) { PushToast("Empty message", "Type a commit message first.", ""); return; }
+        var res = await GitService.Commit(root, CommitMessage);
+        OutputLog += $"[git] commit\n{res}\n";
+        CommitMessage = "";
+        await RefreshGitAsync();
+        PushToast("Committed", GitBranch, "");
+    }
+
+    [RelayCommand]
+    private async Task GenCommitMsg()
+    {
+        var root = _workspace.ActiveRoot;
+        if (root == null) return;
+        var files = await GitService.Status(root);
+        var scope = files.Count > 0 ? files[0].Path : "workspace";
+        InputText = $"/commit-msg {scope}";
+        await SendCommand.ExecuteAsync(null);
+    }
+
+    [RelayCommand]
+    private async Task ShowPriorVersion(GitLog? log)
+    {
+        var root = _workspace.ActiveRoot;
+        var file = SelectedGitFile?.Path ?? SelectedNode?.FullPath;
+        if (root == null || log == null || string.IsNullOrEmpty(file)) { PushToast("Select first", "Pick a history row and a file.", ""); return; }
+        var rel = System.IO.Path.IsPathRooted(file) ? System.IO.Path.GetRelativePath(root, file) : file;
+        var text = await GitService.Show(root, log.Hash, rel);
+        var tab = new EditorTab { FilePath = $"{rel}@{log.Hash}", Title = $"{System.IO.Path.GetFileName(rel)}@{log.Hash}", Content = string.IsNullOrWhiteSpace(text) ? "(empty or binary)" : text, IsPreview = true, Language = DetectLanguage(rel), LargeFileMode = text.Length > 200_000 };
+        Tabs.Add(tab);
+        ActiveTab = tab;
+        SyncEditorFromTab();
+    }
+
+    // ---------- Phase 10.2 Ghost ----------
+    private readonly System.Collections.Generic.List<CompleteService.Suggestion> _ghosts = new();
+    private int _ghostIdx;
+    private System.Threading.Timer? _ghostTimer;
+
+    private void ScheduleGhost()
+    {
+        if (!CompleteEnabled || ActiveTab == null) return;
+        _ghostTimer?.Dispose();
+        _ghostTimer = new System.Threading.Timer(_ =>
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+            {
+                await RefreshGhostAsync();
+            });
+        }, null, 600, System.Threading.Timeout.Infinite);
+    }
+
+    private async System.Threading.Tasks.Task RefreshGhostAsync()
+    {
+        if (!CompleteEnabled || ActiveTab == null || string.IsNullOrEmpty(EditorText)) return;
+        try
+        {
+            using var svc = new CompleteService(_baseUrl);
+            var hints = new System.Collections.Generic.List<string>();
+            foreach (var t in Tabs)
+            {
+                if (t.FilePath != ActiveTab.FilePath && t.Content.Length > 0)
+                    hints.Add(t.Content.Length > 2000 ? t.Content[..2000] : t.Content);
+                if (hints.Count >= 3) break;
+            }
+            var list = await svc.FetchAsync(EditorText, "", ActiveTab.FilePath, hints);
+            _ghosts.Clear();
+            _ghosts.AddRange(list);
+            _ghostIdx = 0;
+            if (_ghosts.Count > 0)
+            {
+                GhostText = _ghosts[0].Text;
+                GhostWhy = _ghosts[0].Why;
+                GhostVisible = true;
+            }
+            else GhostVisible = false;
+        }
+        catch { GhostVisible = false; }
+    }
+
+    [RelayCommand]
+    private void AcceptGhost()
+    {
+        if (!GhostVisible || ActiveTab == null) return;
+        ActiveTab.Content += GhostText;
+        EditorText = ActiveTab.Content;
+        ActiveTab.IsDirty = true;
+        GhostVisible = false;
+        OutputLog += $"[complete] accepted {GhostText.Length} chars\n";
+    }
+
+    [RelayCommand]
+    private void AcceptWord()
+    {
+        if (!GhostVisible || ActiveTab == null) return;
+        var word = "";
+        foreach (var c in GhostText)
+        {
+            word += c;
+            if (char.IsWhiteSpace(c) && word.Trim().Length > 0) break;
+            if (word.Length > 40) break;
+        }
+        ActiveTab.Content += word;
+        EditorText = ActiveTab.Content;
+        ActiveTab.IsDirty = true;
+        GhostText = GhostText.Length > word.Length ? GhostText[word.Length..] : "";
+        if (string.IsNullOrEmpty(GhostText)) GhostVisible = false;
+    }
+
+    [RelayCommand]
+    private void DismissGhost()
+    {
+        GhostVisible = false;
+    }
+
+    [RelayCommand]
+    private void NextGhost()
+    {
+        if (_ghosts.Count < 2) return;
+        _ghostIdx = (_ghostIdx + 1) % _ghosts.Count;
+        GhostText = _ghosts[_ghostIdx].Text;
+        GhostWhy = _ghosts[_ghostIdx].Why;
+    }
+
+    [RelayCommand]
+    private void ToggleComplete()
+    {
+        CompleteEnabled = !CompleteEnabled;
+        if (!CompleteEnabled) GhostVisible = false;
+        OutputLog += $"[complete] {(CompleteEnabled ? "on" : "off")}\n";
+    }
+
+    // ---------- Phase 10.3 Selection actions ----------
+    [RelayCommand]
+    private void ExplainSelection()
+    {
+        if (string.IsNullOrWhiteSpace(SelectionText)) { PushToast("No selection", "Select code first.", ""); return; }
+        InputText = $"/explain {SelectionText}";
+        _ = SendCommand.ExecuteAsync(null);
+    }
+
+    [RelayCommand]
+    private void FixSelection()
+    {
+        if (string.IsNullOrWhiteSpace(SelectionText)) { PushToast("No selection", "Select code first.", ""); return; }
+        InputText = $"/fix {SelectionText}";
+        _ = SendCommand.ExecuteAsync(null);
+    }
+
+    [RelayCommand]
+    private void AddSelectionToChat()
+    {
+        if (string.IsNullOrWhiteSpace(SelectionText)) return;
+        Chips.Add(new ContextChip { Kind = "selection", Label = SelectionText.Length > 40 ? SelectionText[..40] : SelectionText, Path = ActiveTab?.FilePath ?? "", Tokens = SelectionText.Length / 4 });
+        UpdateTokens();
+        PushToast("Attached", "Selection added as context.", "");
     }
 }

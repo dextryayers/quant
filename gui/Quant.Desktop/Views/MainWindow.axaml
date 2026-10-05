@@ -41,6 +41,7 @@
                 <StackPanel Spacing="4" HorizontalAlignment="Center">
                     <Button Content="EX" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Explorer (Ctrl+Shift+E)"/>
                     <Button Content="SE" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search (Ctrl+Shift+F)"/>
+                    <Button Content="GI" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
                     <Button Content="CH" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Chat (Ctrl+Alt+C)"/>
                     <Button Content="MO" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Models"/>
                     <Button Content="ST" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
@@ -160,6 +161,46 @@
                             <Button Content="Delete local index" FontSize="11" Command="{Binding ClearIndexCommand}"/>
                         </StackPanel>
                     </ScrollViewer>
+                    <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowGit}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="SOURCE CONTROL" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                            <TextBlock Text="{Binding GitBranch}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                            <TextBlock Text="{Binding GitAhead}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Refresh" FontSize="11" Command="{Binding RefreshGitCommand}"/>
+                                <Button Content="Stage" FontSize="11" Command="{Binding StageGitFileCommand}"/>
+                                <Button Content="Diff" FontSize="11" Command="{Binding ShowGitDiffCommand}"/>
+                            </StackPanel>
+                            <ListBox ItemsSource="{Binding GitFiles}" SelectedItem="{Binding SelectedGitFile}" Background="Transparent" MaxHeight="200">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource QuantWarning}" Width="30"/>
+                                            <TextBlock Text="{Binding Path}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBox Text="{Binding CommitMessage}" Watermark="Commit message" Padding="8,6"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Commit" FontSize="11" Command="{Binding CommitNowCommand}"/>
+                                <Button Content="Gen msg" FontSize="11" Command="{Binding GenCommitMsgCommand}"/>
+                            </StackPanel>
+                            <TextBlock Text="HISTORY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding GitLogQuery}" Watermark="Search history" Padding="8,6"/>
+                            <ListBox ItemsSource="{Binding GitLogs}" Background="Transparent" MaxHeight="200">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Hash}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button Content="Open prior version" FontSize="11" Command="{Binding ShowPriorVersionCommand}"/>
+                        </StackPanel>
+                    </ScrollViewer>
                     </Grid>
                     <TextBlock Grid.Row="2" Text="Explorer: right click. Search: SE. Models: MO." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,6,0,0"/>
                 </Grid>
@@ -192,7 +233,7 @@
                     </StackPanel>
                 </DockPanel>
                 <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1">
-                    <Grid RowDefinitions="Auto,Auto,*">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
                         <DockPanel Grid.Row="0" Margin="12,10,12,6">
                             <TextBlock Text="EDITOR" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Right" HorizontalAlignment="Right">
@@ -208,7 +249,24 @@
                             <CheckBox Grid.Column="3" Content="Aa" IsChecked="{Binding FindCase}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="4" Text="{Binding FindStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
                         </Grid>
-                        <ae:TextEditor Grid.Row="2" Margin="12,0,12,12"
+                        <Border Grid.Row="2" Margin="12,0,12,6" Padding="8,6" CornerRadius="6" Background="{DynamicResource QuantSurface2}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding GhostVisible}">
+                            <DockPanel>
+                                <TextBlock Text="{Binding GhostText}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding GhostWhy}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                                    <Button Content="Tab" FontSize="11" Command="{Binding AcceptGhostCommand}" ToolTip.Tip="Accept full suggestion"/>
+                                    <Button Content="Word" FontSize="11" Command="{Binding AcceptWordCommand}" ToolTip.Tip="Accept word (Ctrl+Right)"/>
+                                    <Button Content="Next" FontSize="11" Command="{Binding NextGhostCommand}" ToolTip.Tip="Next suggestion (Alt+])"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="12,0,12,6" IsVisible="{Binding HasSelection}">
+                            <TextBlock Text="Selection" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                            <Button Content="Explain" FontSize="11" Command="{Binding ExplainSelectionCommand}"/>
+                            <Button Content="Fix" FontSize="11" Command="{Binding FixSelectionCommand}"/>
+                            <Button Content="Add to chat" FontSize="11" Command="{Binding AddSelectionToChatCommand}"/>
+                        </StackPanel>
+                        <ae:TextEditor Grid.Row="3" Margin="12,0,12,12"
                                        Name="Editor"
                                        ShowLineNumbers="True"
                                        FontFamily="Cascadia Code,Consolas,Monospace"
