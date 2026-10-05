@@ -590,13 +590,13 @@
                             </ItemsControl>
                             <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" ToolTip.Tip="New shell here" Margin="0,0,6,4">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
                                     <TextBlock Text="PowerShell" FontSize="11" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" CommandParameter="cmd" ToolTip.Tip="New raw CMD here" IsVisible="{Binding IsWindows}" Margin="0,0,6,4">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
                                     <TextBlock Text="CMD" FontSize="11" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
