@@ -4,6 +4,7 @@ mod context;
 mod download;
 mod embed;
 mod index;
+mod llama;
 mod model;
 mod retrieve;
 mod sampler;
@@ -19,7 +20,7 @@ use axum::{
 use async_stream::stream;
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr, path::PathBuf, sync::Arc, time::Instant};
+use std::{collections::HashMap, convert::Infallible, net::SocketAddr, path::PathBuf, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Instant};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tracing::info;
@@ -39,6 +40,8 @@ struct AppState {
     cancels: Arc<RwLock<HashMap<String, bool>>>,
     approvals: Arc<RwLock<HashMap<String, tools::Approval>>>,
     completer: complete::Completer,
+    llama: Arc<llama::Runner>,
+    gen_flags: Arc<std::sync::Mutex<HashMap<String, Arc<AtomicBool>>>>,
 }
 
 #[derive(Debug, Default, Clone, Serialize)]
@@ -127,11 +130,10 @@ struct Usage {
 
 // ---------- Handlers ----------
 async fn health(State(s): State<Arc<AppState>>) -> Json<HealthResp> {
-    let m = s.manager.read().await;
     Json(HealthResp {
         status: "ok".into(),
         version: s.version.clone(),
-        model_loaded: m.active.is_some(),
+        model_loaded: s.llama.is_loaded(),
         models_dir: s.models_dir.to_string_lossy().into(),
         port: s.port,
         uptime_s: s.started_at.elapsed().as_secs(),
@@ -175,17 +177,45 @@ async fn load_model(
     State(s): State<Arc<AppState>>,
     Json(req): Json<LoadReq>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let mut m = s.manager.write().await;
-    match m.load(&req.id, req.context) {
-        Ok(need) => (StatusCode::OK, Json(serde_json::json!({"status":"loaded","id":req.id,"need_mb":need}))),
+    // Preflight first: unknown id or too little RAM fails fast.
+    let (path, need) = match s.manager.read().await.preflight(&req.id, req.context) {
+        Ok(v) => v,
         Err(e) if e.starts_with("INSUFFICIENT_RAM") => {
-            (StatusCode::UNPROCESSABLE_ENTITY, Json(serde_json::json!({"error":{"code":"INSUFFICIENT_RAM","message":e}})))
+            return (StatusCode::UNPROCESSABLE_ENTITY, Json(serde_json::json!({"error":{"code":"INSUFFICIENT_RAM","message":e}})));
         }
-        Err(e) => (StatusCode::NOT_FOUND, Json(serde_json::json!({"error":{"code":"MODEL_NOT_FOUND","message":e}}))),
+        Err(e) => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error":{"code":"MODEL_NOT_FOUND","message":e}})));
+        }
+    };
+    // A real .gguf on disk loads for real via mmap. A preset without a file
+    // yet just becomes active so the UI stays usable until download finishes.
+    let real = path.is_file();
+    if real {
+        let runner = s.llama.clone();
+        let id = req.id.clone();
+        let ctx = req.context;
+        let started = Instant::now();
+        let loaded = tokio::task::spawn_blocking(move || runner.load(&path, &id, ctx)).await;
+        match loaded {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error":{"code":"LOAD_FAILED","message":e}})));
+            }
+            Err(e) => {
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error":{"code":"LOAD_FAILED","message":e.to_string()}})));
+            }
+        }
+        info!("real load took {}ms", started.elapsed().as_millis());
+    } else {
+        // No file on disk: drop any previously loaded real model.
+        s.llama.unload();
     }
+    s.manager.write().await.mark_loaded(&req.id, req.context);
+    (StatusCode::OK, Json(serde_json::json!({"status":"loaded","id":req.id,"need_mb":need,"real":real})))
 }
 
 async fn unload_model(State(s): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    s.llama.unload();
     let mut m = s.manager.write().await;
     let freed = m.unload();
     Json(serde_json::json!({"status":"unloaded","freed_mb":freed}))
@@ -354,10 +384,25 @@ async fn file_search(
     Json(serde_json::json!({"data": hits}))
 }
 
+fn friendly_model(id: &str) -> String {
+    let lower = id.to_lowercase();
+    if lower.contains("3b") {
+        "Assistant Light".into()
+    } else if lower.contains("coder") || lower.contains("code") {
+        "Assistant Coder".into()
+    } else if lower.contains("llama") || lower.contains("8b") {
+        "Assistant Chat".into()
+    } else if lower.starts_with("mock") || lower.starts_with("getting") {
+        "Getting started".into()
+    } else {
+        "Assistant".into()
+    }
+}
+
 fn build_reply(prompt: &str, active: &Option<String>) -> String {
     match active {
-        Some(id) => format!("[ENGINE v0.1 + {id}]\nYou said: {prompt}\n\nLocal GGUF path active with mmap. RAG citations use path:lines format."),
-        None => format!("[MOCK ENGINE v0.1 - GGUF not loaded]\nYou said: {prompt}\n\nLoad a model via POST /v1/models/load with a preset id, or place a .gguf file into ./models/. Presets: qwen2.5-coder-7b-q4_k_m, llama-3.1-8b-q4_k_m, qwen2.5-coder-3b-q4_k_m."),
+        Some(id) => format!("[{}]\nYou said: {prompt}\n\nI am running on this device, and I can read your workspace when you ask.", friendly_model(id)),
+        None => format!("You said: {prompt}\n\nI am not fully awake yet. Open Assistants on the left and pick one, then ask me again."),
     }
 }
 
@@ -370,8 +415,22 @@ async fn chat(State(s): State<Arc<AppState>>, Json(req): Json<ChatReq>) -> Json<
     let (system, kept) = win.truncate("", &turns);
     let last = kept.last().map(|t| t.1.clone()).unwrap_or_default();
     let family = if req.model.contains("llama") { "llama" } else if req.model.contains("qwen") { "qwen" } else { "generic" };
-    let _prompt_text = sampler::render(family, &system, &kept);
-    let reply = build_reply(&last, &active);
+    let prompt_text = sampler::render(family, &system, &kept);
+    // A real .gguf on disk answers for real. Otherwise the friendly fallback.
+    let reply = if s.llama.is_loaded() {
+        let runner = s.llama.clone();
+        let gen = llama::GenParams::precise();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let prompt = prompt_text.clone();
+        match tokio::task::spawn_blocking(move || runner.generate(&prompt, &gen, &cancel, None)).await {
+            Ok(Ok(text)) if !text.trim().is_empty() => text,
+            Ok(Ok(_)) => build_reply(&last, &active),
+            Ok(Err(e)) => format!("I stumbled while thinking ({e}). Please try again."),
+            Err(e) => format!("I stumbled while thinking ({e}). Please try again."),
+        }
+    } else {
+        build_reply(&last, &active)
+    };
     let mut m = s.metrics.write().await;
     m.requests_total += 1;
     m.tokens_in += context::Window::estimate(&last) as u64;
@@ -388,7 +447,7 @@ async fn chat(State(s): State<Arc<AppState>>, Json(req): Json<ChatReq>) -> Json<
 async fn chat_stream(
     State(s): State<Arc<AppState>>,
     Json(req): Json<ChatReq>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+) -> Sse<std::pin::Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
     let active = s.manager.read().await.active.clone();
     let id = format!("cmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(1));
     s.cancels.write().await.insert(id.clone(), false);
@@ -396,16 +455,49 @@ async fn chat_stream(
     let metrics = s.metrics.clone();
     let win = context::Window::new(req.context.min(32768));
     let turns: Vec<(String, String)> = req.messages.iter().map(|m| (m.role.clone(), m.content.clone())).collect();
-    let (_, kept) = win.truncate("", &turns);
+    let (system, kept) = win.truncate("", &turns);
     let last = kept.last().map(|t| t.1.clone()).unwrap_or_default();
-    let full = build_reply(&last, &active);
-    let parts = sampler::pace(&full);
+    let family = if req.model.contains("llama") { "llama" } else if req.model.contains("qwen") { "qwen" } else { "generic" };
+    let prompt_text = sampler::render(family, &system, &kept);
     // metrics in background
     {
         let mut m = metrics.write().await;
         m.requests_total += 1;
         m.tokens_in += context::Window::estimate(&last) as u64;
     }
+
+    // Real model: true token streaming. Otherwise the paced fallback.
+    if s.llama.is_loaded() {
+        let runner = s.llama.clone();
+        let flag = Arc::new(AtomicBool::new(false));
+        s.gen_flags.lock().unwrap().insert(id.clone(), flag.clone());
+        let flags = s.gen_flags.clone();
+        let gen = llama::GenParams::chat();
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(64);
+        let id2 = id.clone();
+        let gen_flag = flag.clone();
+        tokio::task::spawn_blocking(move || {
+            let _ = runner.generate(&prompt_text, &gen, &gen_flag, Some(tx));
+            flags.lock().unwrap().remove(&id2);
+        });
+        let st = stream! {
+            while let Some(piece) = rx.recv().await {
+                if *cancels.read().await.get(&id).unwrap_or(&false) {
+                    flag.store(true, Ordering::Relaxed);
+                    yield Ok(Event::default().data(serde_json::json!({"cancelled": true}).to_string()));
+                    break;
+                }
+                let payload = serde_json::json!({ "delta": piece }).to_string();
+                yield Ok(Event::default().data(payload));
+            }
+            yield Ok(Event::default().data("[DONE]"));
+            cancels.write().await.remove(&id);
+        };
+        return Sse::new(Box::pin(st));
+    }
+
+    let full = build_reply(&last, &active);
+    let parts = sampler::pace(&full);
 
     let st = stream! {
         for w in parts {
@@ -420,7 +512,7 @@ async fn chat_stream(
         yield Ok(Event::default().data("[DONE]"));
         cancels.write().await.remove(&id);
     };
-    Sse::new(st)
+    Sse::new(Box::pin(st))
 }
 
 #[derive(Debug, Deserialize)]
@@ -447,6 +539,20 @@ async fn chat_cancel(
             *v = true;
         }
         n = map.len();
+    }
+    drop(map);
+    // Halt any real generation in flight as well.
+    let mut flags = s.gen_flags.lock().unwrap();
+    for (k, f) in flags.iter() {
+        if k.starts_with(&req.id) || req.id == "all" {
+            f.store(true, Ordering::Relaxed);
+            n += 1;
+        }
+    }
+    if req.id == "all" || n == 0 {
+        for f in flags.values() {
+            f.store(true, Ordering::Relaxed);
+        }
     }
     Json(serde_json::json!({"cancelled": n}))
 }
@@ -624,25 +730,27 @@ async fn tool_exec(
     Json(req): Json<ExecReq>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let allow = vec!["dotnet".into(), "cargo".into(), "npm".into(), "node".into(), "python".into(), "git".into(), "go".into(), "echo".into(), "dir".into(), "ls".into(), "cat".into(), "type".into()];
-    let needs_token = tools::exec_allowed(&req.command, &allow).is_err();
+    // Planner echoes user phrasing like "run cargo test". Accept it as cargo test.
+    let command = req.command.strip_prefix("run ").unwrap_or(&req.command).to_string();
+    let needs_token = tools::exec_allowed(&command, &allow).is_err();
     if needs_token {
         let ok = match &req.approval_token {
             Some(t) => s.approvals.read().await.contains_key(t),
             None => false,
         };
         if !ok {
-            audit("exec", &serde_json::json!({"command": req.command}), false, "needs approval");
+            audit("exec", &serde_json::json!({"command": command}), false, "needs approval");
             return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error":{"code":"NEEDS_APPROVAL","message":"exec requires approval token"}})));
         }
     }
     let cwd = req.cwd.clone().unwrap_or_else(|| roots_for(req.root.as_deref())[0].clone());
     let mut cmd = if cfg!(windows) {
         let mut c = tokio::process::Command::new("cmd");
-        c.args(["/C", &req.command]);
+        c.args(["/C", &command]);
         c
     } else {
         let mut c = tokio::process::Command::new("sh");
-        c.args(["-c", &req.command]);
+        c.args(["-c", &command]);
         c
     };
     cmd.current_dir(&cwd);
@@ -652,11 +760,11 @@ async fn tool_exec(
     let out = tokio::time::timeout(timeout, cmd.output()).await;
     match out {
         Err(_) => {
-            audit("exec", &serde_json::json!({"command": req.command}), false, "timeout");
+            audit("exec", &serde_json::json!({"command": command}), false, "timeout");
             (StatusCode::REQUEST_TIMEOUT, Json(serde_json::json!({"error":{"code":"TIMEOUT","message":"killed on timeout"}})))
         }
         Ok(Err(e)) => {
-            audit("exec", &serde_json::json!({"command": req.command}), false, &e.to_string());
+            audit("exec", &serde_json::json!({"command": command}), false, &e.to_string());
             (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":{"code":"SPAWN","message":e.to_string()}})))
         }
         Ok(Ok(o)) => {
@@ -668,7 +776,7 @@ async fn tool_exec(
             if stderr.len() > 65536 {
                 stderr = format!("...[truncated]\n{}", &stderr[stderr.len() - 65536..]);
             }
-            audit("exec", &serde_json::json!({"command": req.command}), o.status.success(), &stdout.lines().next().unwrap_or("").to_string());
+            audit("exec", &serde_json::json!({"command": command}), o.status.success(), &stdout.lines().next().unwrap_or("").to_string());
             (StatusCode::OK, Json(serde_json::json!({"code": o.status.code(), "stdout": stdout, "stderr": stderr})))
         }
     }
@@ -829,6 +937,8 @@ async fn main() {
         cancels: Arc::new(RwLock::new(HashMap::new())),
         approvals: Arc::new(RwLock::new(HashMap::new())),
         completer: complete::Completer::new(),
+        llama: Arc::new(llama::Runner::new()),
+        gen_flags: Arc::new(std::sync::Mutex::new(HashMap::new())),
     });
 
     let app = Router::new()

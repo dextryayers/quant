@@ -28,9 +28,9 @@ public sealed class QuantEngineClient : IDisposable
             res.EnsureSuccessStatusCode();
             return await res.Content.ReadAsStringAsync(ct);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return $"engine offline: {ex.Message}";
+            return "unreachable";
         }
     }
 

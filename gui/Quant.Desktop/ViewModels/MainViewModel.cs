@@ -36,18 +36,27 @@ public partial class MainViewModel : ViewModelBase
         _engine = new QuantEngineClient(baseUrl);
         _port = port;
         RememberBase(baseUrl);
-        StatusText = $"engine :{port} not checked";
+        StatusText = "Starting…";
         ActiveActivity = _layout.State.ActiveActivity;
+        SideTitle = TitleFor(ActiveActivity);
         SideVisible = _layout.State.SideVisible;
         RightVisible = _layout.State.RightVisible;
         BottomVisible = _layout.State.BottomVisible;
         BottomTab = _layout.State.BottomTab;
-        OutputLog = "Engine log will appear here.\nIndex log will appear here.\n";
+        OutputLog = "Activity appears here.\nAssistant and workspace events show up below.\n";
         CurrentTheme = "dark-premium";
         ShowExplorer = ActiveActivity == "Explorer";
         ShowSearch = ActiveActivity == "Search" || ActiveActivity == "Symbols";
         ShowModels = ActiveActivity == "Models";
         ShowGit = ActiveActivity == "Git";
+        ShowSettings = ActiveActivity == "Settings";
+        SyncNav(ActiveActivity);
+        Tabs.CollectionChanged += (_, __) =>
+        {
+            HasTabs = Tabs.Count > 0;
+            ShowWelcome = Tabs.Count == 0;
+        };
+        Problems.CollectionChanged += (_, __) => NoProblems = Problems.Count == 0;
         ShowProblemsView = BottomTab == "Problems";
         ShowTerminalView = BottomTab == "Terminal";
         ShowTasksView = BottomTab == "Tasks";
@@ -239,6 +248,69 @@ public partial class MainViewModel : ViewModelBase
     public partial string ActiveActivity { get; set; } = "Explorer";
 
     [ObservableProperty]
+    public partial string SideTitle { get; set; } = "Files";
+
+    [ObservableProperty]
+    public partial bool HasTabs { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowWelcome { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowSettings { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool NoProblems { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string StatusModel { get; set; } = "No assistant";
+
+    public string ThemeLabel => CurrentTheme == "light-pro" ? "Light" : "Dark";
+
+    [ObservableProperty]
+    public partial bool NavExplorer { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool NavSearch { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool NavGit { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool NavChat { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool NavModels { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool NavSettings { get; set; } = false;
+
+    private void SyncNav(string id)
+    {
+        NavExplorer = id == "Explorer";
+        NavSearch = id is "Search" or "Symbols";
+        NavGit = id == "Git";
+        NavChat = id == "Chat";
+        NavModels = id == "Models";
+        NavSettings = id == "Settings";
+    }
+
+    private static string TitleFor(string activity)
+    {
+        return activity switch
+        {
+            "Explorer" => "Files",
+            "Search" => "Search",
+            "Symbols" => "Symbols",
+            "Models" => "Assistants",
+            "Git" => "Source control",
+            "Chat" => "Assistant",
+            "Settings" => "Settings",
+            _ => "Files",
+        };
+    }
+
+    [ObservableProperty]
     public partial bool ShowExplorer { get; set; } = true;
 
     [ObservableProperty]
@@ -296,11 +368,22 @@ public partial class MainViewModel : ViewModelBase
     private void SetActivity(string id)
     {
         ActiveActivity = id;
-        SideVisible = true;
+        SideTitle = TitleFor(id);
+        SyncNav(id);
         ShowExplorer = id == "Explorer";
         ShowSearch = id == "Search" || id == "Symbols";
         ShowModels = id == "Models";
         ShowGit = id == "Git";
+        ShowSettings = id == "Settings";
+        if (id == "Chat")
+        {
+            SideVisible = false;
+            RightVisible = true;
+        }
+        else
+        {
+            SideVisible = true;
+        }
         _layout.State.ActiveActivity = id;
         _layout.State.SideVisible = true;
         _layout.Save();
@@ -349,12 +432,14 @@ public partial class MainViewModel : ViewModelBase
         if (tab == "Terminal" && ActiveTerminal == null) NewTerminalCommand.Execute(null);
     }
 
+    partial void OnCurrentThemeChanged(string value) => OnPropertyChanged(nameof(ThemeLabel));
+
     [RelayCommand]
     private void ToggleTheme()
     {
         _theme.Toggle();
         CurrentTheme = _theme.Current;
-        OutputLog += $"[theme] {CurrentTheme}\n";
+        OutputLog += $"[appearance] {(CurrentTheme == "light-pro" ? "Light" : "Dark")}\n";
     }
 
     [RelayCommand]
@@ -364,7 +449,7 @@ public partial class MainViewModel : ViewModelBase
         {
             var vm = new CommandPaletteViewModel();
             var win = new Views.CommandPalette { DataContext = vm };
-            OutputLog += "[palette] opened with 15 commands indexed\n";
+            OutputLog += "[commands] opened\n";
             // Owner wiring happens in view code behind via singleton ref when available.
             // Fallback: store pending palette request for MainWindow to show.
             PendingPalette = win;
@@ -378,32 +463,41 @@ public partial class MainViewModel : ViewModelBase
 
     public object? PendingPalette { get; private set; }
 
+    public object? PendingFolderRequest { get; private set; }
+
+    [RelayCommand]
+    private void RequestFolder()
+    {
+        PendingFolderRequest = new object();
+        OnPropertyChanged(nameof(PendingFolderRequest));
+    }
+
     [ObservableProperty]
-    public partial string EditorText { get; set; } = "// Welcome to Quant IDE (MVP)\n// 1. Start engine: cargo run -p quant-engine (port 3737)\n// 2. Ask in the assistant panel on the right\n// 3. Next: load a .gguf file from Hugging Face into engine/models/\n\nfn main() {\n    println!(\"hello quant\");\n}\n";
+    public partial string EditorText { get; set; } = "// Welcome to Quant.\n// Open any file on the left, or ask the assistant on the right.\n// Your code never leaves this device.\n\nfn main() {\n    println!(\"hello quant\");\n}\n";
 
     [ObservableProperty]
     public partial string InputText { get; set; } = "";
 
     [ObservableProperty]
-    public partial string StatusText { get; set; } = "engine: not checked";
+    public partial string StatusText { get; set; } = "Starting…";
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
     public ObservableCollection<ChatMessage> Messages { get; } = new()
     {
-        new ChatMessage { Role = "assistant", Content = "Welcome to Quant. Attach a file or ask about the open editor. Local GGUF inference stays offline and memory mapped." }
+        new ChatMessage { Role = "assistant", Content = "Welcome to Quant. Open a file or ask anything. Your code never leaves this device." }
     };
 
     [RelayCommand]
     private async Task CheckHealth()
     {
-        StatusText = $"checking engine on :{_port}...";
-        OutputLog += $"[health] GET :{_port}/health\n";
+        StatusText = "Waking up…";
+        OutputLog += "[assistant] checking…\n";
         // Try auto-start sidecar before reporting offline.
         if (!await EngineSupervisor.Healthy(_port))
         {
-            OutputLog += "[health] not running, starting sidecar...\n";
+            OutputLog += "[assistant] starting in the background…\n";
             await new EngineSupervisor().EnsureRunningAsync(_port);
         }
         var h = await _engine.GetHealthAsync();
@@ -411,15 +505,15 @@ public partial class MainViewModel : ViewModelBase
         {
             using var doc = JsonDocument.Parse(h);
             var v = doc.RootElement.GetProperty("version").GetString();
-            StatusText = $"engine v{v} on :{_port} connected";
-            OutputLog += $"[health] OK v{v}\n";
-            PushToast("Engine connected", $"v{v} on :{_port}", "View logs");
+            StatusText = "Ready";
+            OutputLog += $"[assistant] ready (v{v})\n";
+            PushToast("Assistant ready", "Everything runs on this device.", "View activity");
         }
         catch
         {
-            StatusText = h.Length > 120 ? h[..120] : h;
-            OutputLog += $"[health] {StatusText}\n";
-            PushToast("Engine offline", "Start with cargo run -p quant-engine", "Retry");
+            StatusText = "Starting…";
+            OutputLog += "[assistant] still starting…\n";
+            PushToast("Starting up", "This takes a moment on first run.", "Retry");
         }
     }
 
@@ -482,8 +576,8 @@ public partial class MainViewModel : ViewModelBase
                 Messages[idx] = new ChatMessage { Role = "assistant", Content = once };
             }
             }
-            StatusText = "engine connected";
-            PushToast("Reply ready", "Assistant stream completed", "");
+            StatusText = "Ready";
+            PushToast("Reply ready", "Assistant finished writing.", "");
             EnsureThreads();
             if (ActiveThread != null)
             {
@@ -502,9 +596,9 @@ public partial class MainViewModel : ViewModelBase
         catch (System.Exception ex)
         {
             var idx = Messages.IndexOf(assistant);
-            Messages[idx] = new ChatMessage { Role = "assistant", Content = $"Engine offline: {ex.Message}. Start it with: cargo run -p quant-engine" };
-            StatusText = "engine offline";
-            PushToast("Engine offline", ex.Message, "Retry");
+            Messages[idx] = new ChatMessage { Role = "assistant", Content = $"Hmm, that did not go through ({ex.Message}). Give it another try in a moment." };
+            StatusText = "Starting…";
+            PushToast("Not ready yet", "The assistant is still starting.", "Retry");
         }
         finally
         {
@@ -558,6 +652,13 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void EnsureChildren(FileNode? node)
+    {
+        if (node == null || !node.IsDirectory || node.ChildrenLoaded) return;
+        _explorer.LoadChildren(node, ExplorerFilter, ExplorerSort, ShowExcluded, 1);
+    }
+
+    [RelayCommand]
     private void OpenFile(FileNode? node)
     {
         node ??= SelectedNode;
@@ -595,7 +696,7 @@ public partial class MainViewModel : ViewModelBase
             ActiveTab = tab;
             SyncEditorFromTab();
             UpdateBreadcrumbs();
-            if (tab.LargeFileMode) PushToast("Large file guard", $"{tab.Title} opened in safe preview.", "");
+            if (tab.LargeFileMode) PushToast("Big file", $"{tab.Title} opened in a safe preview.", "");
             OutputLog += $"[editor] open {path}\n";
         }
         catch (System.Exception ex) { PushToast("Open failed", ex.Message, ""); }
@@ -872,7 +973,7 @@ public partial class MainViewModel : ViewModelBase
         if (ActiveTab == null || string.IsNullOrEmpty(ActiveTab.FilePath)) return;
         try
         {
-            if (ActiveTab.LargeFileMode) { PushToast("Large file", "Save disabled in preview guard.", ""); return; }
+            if (ActiveTab.LargeFileMode) { PushToast("Read-only preview", "Open the file directly to edit it.", ""); return; }
             System.IO.File.WriteAllText(ActiveTab.FilePath, ActiveTab.Content);
             ActiveTab.IsDirty = false;
             ActiveTab.IsPreview = false;
@@ -1099,7 +1200,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _chatCts?.Cancel();
         IsBusy = false;
-        PushToast("Stopped", "Streaming cancelled. Partial text kept.", "");
+        PushToast("Stopped", "Kept what was written so far.", "");
     }
 
     private void UpdateTokens()
@@ -1173,8 +1274,8 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void DryRun()
     {
-        var tools = string.Join(",", _extensions.ChatTools());
-        var prompt = $"chips={Chips.Count} tokens={TokenMeter} mode={ChatMode} tools=[{tools}] cloud={(CloudEnabled ? "opt-in" : "off")}";
+        var helpers = new System.Collections.Generic.List<string>(_extensions.ChatTools()).Count;
+        var prompt = $"chips={Chips.Count} tokens={TokenMeter} mode={ChatMode} helpers={helpers} cloud={(CloudEnabled ? "on" : "off")}";
         OutputLog += $"[dry-run] {prompt}\nInput: {InputText}\n";
         PushToast("Dry run", prompt.Length > 120 ? prompt[..120] : prompt, "");
     }
@@ -1232,6 +1333,23 @@ public partial class MainViewModel : ViewModelBase
         await RefreshModelsAsync();
     }
 
+    [RelayCommand]
+    private void OpenModelsFolder()
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(System.AppContext.BaseDirectory, "models");
+            System.IO.Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true,
+            });
+            PushToast("Models folder", "Drop any .gguf file in, then Refresh.", "");
+        }
+        catch (System.Exception ex) { PushToast("Please try again", ex.Message, ""); }
+    }
+
     private async Task RefreshModelsAsync()
     {
         try
@@ -1242,12 +1360,13 @@ public partial class MainViewModel : ViewModelBase
             foreach (var m in list) Models.Add(m);
             var loaded = System.Linq.Enumerable.FirstOrDefault(Models, m => m.Loaded);
             ActiveModelId = loaded?.Id ?? "";
+            StatusModel = loaded?.DisplayName ?? "No assistant";
             ModelStatus = loaded != null
-                ? $"Loaded {loaded.Id} RAM ~{(loaded.RamMb ?? 0):F0} MB mmap"
-                : $"{Models.Count} models found. Local only, no upload.";
-            OutputLog += $"[models] {Models.Count} entries, active={ActiveModelId}\n";
+                ? $"Using {loaded.DisplayName}"
+                : "Pick an assistant to begin. Everything runs on this device.";
+            OutputLog += $"[assistants] {Models.Count} available\n";
         }
-        catch (System.Exception ex) { ModelStatus = ex.Message; }
+        catch { ModelStatus = "Could not reach the assistant. Trying again…"; }
     }
 
     [RelayCommand]
@@ -1257,23 +1376,45 @@ public partial class MainViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(id))
         {
             var first = System.Linq.Enumerable.FirstOrDefault(Models);
-            if (first == null) { PushToast("No model", "Refresh models first.", ""); return; }
+            if (first == null) { PushToast("Nothing here yet", "Pull down to refresh first.", ""); return; }
             id = first.Id;
         }
         await LoadModelAsync(id);
     }
 
+    private static string FriendlyModel(string id, System.Collections.Generic.IEnumerable<EngineModel> models)
+    {
+        foreach (var m in models)
+            if (m.Id == id) return m.DisplayName;
+        return "assistant";
+    }
+
     private async Task LoadModelAsync(string id)
     {
+        string name = FriendlyModel(id, Models);
         try
         {
             using var svc = new ModelService(_baseUrl);
             var body = await svc.LoadAsync(id);
-            ModelStatus = body.Length > 200 ? body[..200] : body;
-            await RefreshModelsAsync();
-            PushToast("Model", ModelStatus, "");
+            if (body.Contains("INSUFFICIENT_RAM"))
+            {
+                ModelStatus = "This device is low on memory. Try Assistant Light.";
+                PushToast("Not enough memory", "Assistant Light needs much less.", "");
+            }
+            else if (body.Contains("MODEL_NOT_FOUND"))
+            {
+                ModelStatus = "That assistant is not available.";
+                PushToast("Not found", "Please pick another one.", "");
+            }
+            else
+            {
+                await RefreshModelsAsync();
+                name = FriendlyModel(id, Models);
+                ModelStatus = $"Using {name}";
+                PushToast("All set", $"You are now talking to {name}.", "");
+            }
         }
-        catch (System.Exception ex) { PushToast("Load failed", ex.Message, ""); }
+        catch { PushToast("Please try again", "The switch did not go through.", ""); }
     }
 
     [RelayCommand]
@@ -1284,9 +1425,9 @@ public partial class MainViewModel : ViewModelBase
             using var svc = new ModelService(_baseUrl);
             await svc.UnloadAsync();
             await RefreshModelsAsync();
-            PushToast("Unloaded", "RAM released.", "");
+            PushToast("Paused", "It will wake up when you need it.", "");
         }
-        catch (System.Exception ex) { PushToast("Unload failed", ex.Message, ""); }
+        catch { PushToast("Please try again", "That did not go through.", ""); }
     }
 
     [RelayCommand]
@@ -1299,11 +1440,11 @@ public partial class MainViewModel : ViewModelBase
             using var http = new System.Net.Http.HttpClient { BaseAddress = new System.Uri(_baseUrl), Timeout = System.TimeSpan.FromMinutes(5) };
             var json = System.Text.Json.JsonSerializer.Serialize(new { roots = new[] { root }, full = false });
             var res = await http.PostAsync("/v1/index/refresh", new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json"));
-            var body = await res.Content.ReadAsStringAsync();
-            OutputLog += $"[index] {body}\n";
-            PushToast("Index refreshed", body.Length > 120 ? body[..120] : body, "");
+            await res.Content.ReadAsStringAsync();
+            OutputLog += "[knowledge] workspace relearned\n";
+            PushToast("Knowledge refreshed", "The assistant relearned this workspace.", "");
         }
-        catch (System.Exception ex) { PushToast("Index failed", ex.Message, ""); }
+        catch { PushToast("Please try again", "That did not go through.", ""); }
     }
 
     [RelayCommand]
@@ -1313,10 +1454,10 @@ public partial class MainViewModel : ViewModelBase
         {
             if (System.IO.Directory.Exists("./index"))
                 System.IO.Directory.Delete("./index", true);
-            OutputLog += "[privacy] local index deleted\n";
-            PushToast("Privacy", "Local index deleted. No data leaves device.", "");
+            OutputLog += "[privacy] workspace forgotten\n";
+            PushToast("Forgotten", "What was learned about this workspace is gone.", "");
         }
-        catch (System.Exception ex) { PushToast("Clear failed", ex.Message, ""); }
+        catch { PushToast("Please try again", "That did not go through.", ""); }
     }
 
     private async Task<string> RagCitationsAsync(string query)
@@ -1348,39 +1489,131 @@ public partial class MainViewModel : ViewModelBase
         InputText = "";
         AgentStatus = "planning";
         Messages.Add(new ChatMessage { Role = "user", Content = $"[{ChatMode}] {msg}" });
-        OutputLog += $"[agent] run mode={ChatMode} msg={msg}\n";
+        var working = new ChatMessage { Role = "assistant", Content = "Working on it…" };
+        Messages.Add(working);
+        void RefreshWorking()
+        {
+            var idx = Messages.IndexOf(working);
+            if (idx >= 0) Messages[idx] = new ChatMessage { Role = "assistant", Content = working.Content };
+        }
+        void Step(string line)
+        {
+            working.Content += "\n" + line;
+            RefreshWorking();
+        }
+        OutputLog += $"[agent] run mode={ChatMode}\n";
         try
         {
             using var svc = new AgentService(_baseUrl);
             var root = _workspace.ActiveRoot ?? ".";
-            await svc.RunAsync(ChatMode, msg, root, data =>
+            var steps = await svc.RunAsync(ChatMode, msg, root, data =>
             {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => OutputLog += $"[agent] {data}\n");
+            });
+            var executed = 0;
+            foreach (var (type, tool, text) in steps)
+            {
+                if (type == "awaiting_approval")
                 {
-                    OutputLog += $"[agent] {data}\n";
+                    string reason = tool, argsJson = text;
                     try
                     {
-                        using var doc = System.Text.Json.JsonDocument.Parse(data);
-                        var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
-                        if (type == "awaiting_approval")
-                        {
-                            var tool = doc.RootElement.TryGetProperty("tool", out var tl) ? tl.GetString() ?? "" : "";
-                            var reason = doc.RootElement.TryGetProperty("reason", out var r) ? r.GetString() ?? "" : "";
-                            Approvals.Add(new ApprovalCard { Id = System.Guid.NewGuid().ToString("N")[..8], Tool = tool, Args = data.Length > 200 ? data[..200] : data, Reason = reason });
-                            AgentStatus = "awaiting approval";
-                        }
+                        using var doc = System.Text.Json.JsonDocument.Parse(text);
+                        if (doc.RootElement.TryGetProperty("reason", out var r)) reason = r.GetString() ?? tool;
+                        if (doc.RootElement.TryGetProperty("args", out var a)) argsJson = a.GetRawText();
                     }
                     catch { }
-                });
-            });
-            AgentStatus = Approvals.Count > 0 ? "awaiting approval" : "done";
-            if (ChatMode == "Ask") AgentStatus = "done";
+                    Approvals.Add(new ApprovalCard
+                    {
+                        Id = System.Guid.NewGuid().ToString("N")[..8],
+                        Tool = tool,
+                        Args = argsJson.Length > 200 ? argsJson[..200] : argsJson,
+                        FullArgs = argsJson,
+                        Reason = reason,
+                        Context = msg,
+                    });
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => Step($"• Needs your approval: {FriendlyStep(tool)}"));
+                    continue;
+                }
+                if (type != "tool_result") continue;
+                try
+                {
+                    if (tool == "grep")
+                    {
+                        var body = await svc.GrepAsync(msg, root);
+                        var n = CountHits(body);
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() => Step($"• Searched the workspace — {n} hits"));
+                        executed++;
+                    }
+                    else if (tool == "glob")
+                    {
+                        await svc.GlobAsync("**/*", root);
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() => Step("• Listed matching files"));
+                        executed++;
+                    }
+                    else if (tool == "read")
+                    {
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() => Step("• Reading the most relevant file…"));
+                        executed++;
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => Step($"• Skipped a step ({ex.Message})"));
+                }
+            }
+            if (Approvals.Count > 0)
+            {
+                Step("• Waiting for your approval below to continue.");
+                AgentStatus = "awaiting approval";
+            }
+            else
+            {
+                Step(executed > 0 ? "• Done. Ask for an edit to continue." : "• Done.");
+                AgentStatus = "done";
+            }
+            if (ChatMode == "Ask" && Approvals.Count == 0) AgentStatus = "done";
+            EnsureThreads();
+            if (ActiveThread != null)
+            {
+                ActiveThread.Messages = new System.Collections.Generic.List<ChatMessage>(Messages);
+                ActiveThread.Updated = System.DateTime.Now;
+                _threads!.Save();
+            }
         }
         catch (System.Exception ex)
         {
             AgentStatus = "error";
+            working.Content += $"\n• Something went wrong ({ex.Message}).";
+            RefreshWorking();
             PushToast("Agent failed", ex.Message, "");
         }
+    }
+
+    private static string FriendlyStep(string tool)
+    {
+        return tool switch
+        {
+            "grep" => "searching code",
+            "read" => "reading a file",
+            "glob" => "listing files",
+            "symbols" => "looking up a symbol",
+            "apply_diff" => "editing a file",
+            "exec" => "running a command",
+            _ when tool.StartsWith("mcp:", System.StringComparison.Ordinal) => "using a connector",
+            _ => "working",
+        };
+    }
+
+    private static int CountHits(string body)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("hits", out var h)) return h.GetArrayLength();
+        }
+        catch { }
+        return 0;
     }
 
     [RelayCommand]
@@ -1409,14 +1642,68 @@ public partial class MainViewModel : ViewModelBase
                 return;
             }
             using var svc = new AgentService(_baseUrl);
-            var token = await svc.GrantAsync("workspace", card.Tool);
+            // Approving an edit asks the assistant to write the change as a code block.
+            if (card.Tool == "apply_diff" && !string.IsNullOrWhiteSpace(card.Context))
+            {
+                card.Status = "approved";
+                Approvals.Remove(card);
+                if (Approvals.Count == 0) AgentStatus = "done";
+                InputText = $"Make this change and show the full updated code:\n{card.Context}";
+                PushToast("Working on the edit", "The proposal appears below.", "");
+                await SendCommand.ExecuteAsync(null);
+                return;
+            }
+            // Approving a command runs it with a one-time token, then reports back.
+            if (card.Tool == "exec")
+            {
+                var command = ExtractCommand(card.FullArgs);
+                var token = await svc.GrantAsync("workspace", card.Tool);
+                var root = _workspace.ActiveRoot ?? ".";
+                var result = await svc.ExecAsync(command, root, token);
+                card.Status = "approved";
+                Approvals.Remove(card);
+                if (Approvals.Count == 0) AgentStatus = "done";
+                var tail = SummarizeExec(result);
+                Messages.Add(new ChatMessage { Role = "assistant", Content = tail });
+                OutputLog += $"[exec] {command}\n{tail}\n";
+                PushToast("Command finished", command.Length > 80 ? command[..80] : command, "");
+                return;
+            }
+            var fallback = await svc.GrantAsync("workspace", card.Tool);
             card.Status = "approved";
-            OutputLog += $"[approval] {card.Tool} granted {token}\n";
-            PushToast("Approved once", $"{card.Tool}: {card.Reason}", "");
+            OutputLog += $"[approval] {card.Label} allowed once ({fallback.Length} chars token)\n";
+            PushToast("Allowed once", $"{card.Label}: {card.Reason}", "");
             Approvals.Remove(card);
             if (Approvals.Count == 0) AgentStatus = "done";
         }
         catch (System.Exception ex) { PushToast("Approve failed", ex.Message, ""); }
+    }
+
+    private static string ExtractCommand(string argsJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(argsJson);
+            if (doc.RootElement.TryGetProperty("command", out var c)) return c.GetString() ?? "";
+        }
+        catch { }
+        return argsJson.Length > 200 ? argsJson[..200] : argsJson;
+    }
+
+    private static string SummarizeExec(string body)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            var code = doc.RootElement.TryGetProperty("code", out var c) ? c.ToString() : "?";
+            var stdout = doc.RootElement.TryGetProperty("stdout", out var s) ? s.GetString() ?? "" : body;
+            if (stdout.Length > 1500) stdout = stdout[^1500..];
+            return $"Ran with exit {code}:\n{stdout.Trim()}";
+        }
+        catch
+        {
+            return body.Length > 1500 ? body[^1500..] : body;
+        }
     }
 
     [RelayCommand]
@@ -1812,7 +2099,7 @@ public partial class MainViewModel : ViewModelBase
             if (_ghosts.Count > 0)
             {
                 GhostText = _ghosts[0].Text;
-                GhostWhy = _ghosts[0].Why;
+                GhostWhy = FriendlyHint(_ghosts[0].Why);
                 GhostVisible = true;
             }
             else GhostVisible = false;
@@ -1861,7 +2148,19 @@ public partial class MainViewModel : ViewModelBase
         if (_ghosts.Count < 2) return;
         _ghostIdx = (_ghostIdx + 1) % _ghosts.Count;
         GhostText = _ghosts[_ghostIdx].Text;
-        GhostWhy = _ghosts[_ghostIdx].Why;
+        GhostWhy = FriendlyHint(_ghosts[_ghostIdx].Why);
+    }
+
+    private static string FriendlyHint(string why)
+    {
+        return why switch
+        {
+            "brace balance" => "Auto close",
+            "rag hint" => "From your code",
+            "pattern" => "Common pattern",
+            "suffix" => "Completion",
+            _ => "Suggestion",
+        };
     }
 
     [RelayCommand]

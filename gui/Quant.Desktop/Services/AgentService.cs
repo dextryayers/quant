@@ -71,4 +71,18 @@ public sealed class AgentService : IDisposable
         var res = await _http.PostAsync("/v1/tools/read", new StringContent(json, Encoding.UTF8, "application/json"), ct).ConfigureAwait(false);
         return await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
     }
+
+    public async Task<string> GrepAsync(string query, string root, CancellationToken ct = default)
+    {
+        var json = JsonSerializer.Serialize(new { query, include = "**/*", regex = false, root });
+        var res = await _http.PostAsync("/v1/tools/grep", new StringContent(json, Encoding.UTF8, "application/json"), ct).ConfigureAwait(false);
+        return await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+    }
+
+    public async Task<string> GlobAsync(string pattern, string root, CancellationToken ct = default)
+    {
+        var json = JsonSerializer.Serialize(new { pattern, root });
+        var res = await _http.PostAsync("/v1/tools/glob", new StringContent(json, Encoding.UTF8, "application/json"), ct).ConfigureAwait(false);
+        return await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+    }
 }

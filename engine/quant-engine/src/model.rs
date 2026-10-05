@@ -102,7 +102,7 @@ impl Manager {
         presets().iter().find(|p| p.id == id).map(|p| self.dir.join(&p.filename))
     }
 
-    pub fn load(&mut self, id: &str, context: usize) -> Result<f64, String> {
+    pub fn preflight(&self, id: &str, context: usize) -> Result<(PathBuf, f64), String> {
         let path = self.file_for(id).ok_or_else(|| format!("MODEL_NOT_FOUND: {id}"))?;
         let size_mb = std::fs::metadata(&path).map(|m| m.len() as f64 / 1024.0 / 1024.0).unwrap_or_else(|_| {
             presets().iter().find(|p| p.id == id).map(|p| p.size_mb).unwrap_or(4700.0)
@@ -115,10 +115,22 @@ impl Manager {
                 "INSUFFICIENT_RAM: need {need:.0} MB but only {free_mb:.0} MB free of {total_mb:.0} MB. Try smaller quant or context 4096. Presets: {small}"
             ));
         }
-        // Real llama.cpp mmap load lands here in V0.2. V0.1.0 marks resident with sidecar.
+        Ok((path, need))
+    }
+
+    pub fn mark_loaded(&mut self, id: &str, context: usize) {
+        let path = match self.file_for(id) {
+            Some(p) => p,
+            None => return,
+        };
         self.active = Some(id.to_string());
         self.loaded_at = Some(Instant::now());
         let _ = std::fs::write(sidecar(&path), format!("{{\"id\":\"{id}\",\"context\":{context}}}"));
+    }
+
+    pub fn load(&mut self, id: &str, context: usize) -> Result<f64, String> {
+        let (_, need) = self.preflight(id, context)?;
+        self.mark_loaded(id, context);
         Ok(need)
     }
 

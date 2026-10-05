@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using AvaloniaEdit.Highlighting;
+using Quant.Desktop.Models;
 using Quant.Desktop.ViewModels;
 using System;
 
@@ -76,6 +77,10 @@ public partial class MainWindow : Window
                         {
                             await p.ShowDialog(this);
                         }
+                        if (e.PropertyName == nameof(MainViewModel.PendingFolderRequest) && vm.PendingFolderRequest != null)
+                        {
+                            PickFolder();
+                        }
                     };
                 }
             };
@@ -88,8 +93,16 @@ public partial class MainWindow : Window
                 if (DataContext is MainViewModel vm && vm.SelectedNode != null && !vm.SelectedNode.IsDirectory)
                     vm.OpenFileCommand.Execute(vm.SelectedNode);
                 else if (DataContext is MainViewModel vm2 && vm2.SelectedNode != null)
-                    vm2.ExpandNodeCommand.Execute(vm2.SelectedNode);
+                {
+                    vm2.EnsureChildrenCommand.Execute(vm2.SelectedNode);
+                    vm2.SelectedNode.IsExpanded = !vm2.SelectedNode.IsExpanded;
+                }
             };
+            tree.AddHandler(TreeViewItem.ExpandedEvent, (_, e) =>
+            {
+                if (e.Source is TreeViewItem item && item.DataContext is FileNode node && DataContext is MainViewModel vm)
+                    vm.EnsureChildrenCommand.Execute(node);
+            });
         }
     }
 

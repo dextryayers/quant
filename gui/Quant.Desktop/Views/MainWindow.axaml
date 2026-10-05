@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Quant.Desktop.ViewModels"
+        xmlns:m="using:Quant.Desktop.Models"
+        xmlns:v="using:Quant.Desktop.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ae="using:AvaloniaEdit"
@@ -8,7 +10,7 @@
         x:Class="Quant.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Quant IDE - AI Code (Rust engine + GGUF)"
+        Title="Quant IDE"
         Background="{DynamicResource QuantBgBase}">
 
     <Design.DataContext>
@@ -17,19 +19,17 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Top bar -->
-        <Border Grid.Row="0" Padding="12,8" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Padding="14,9" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,0,1">
             <DockPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Spacing="8">
-                    <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource QuantAccent}" VerticalAlignment="Center"/>
-                    <TextBlock Text="QUANT" FontWeight="SemiBold" FontSize="13" LetterSpacing="2" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
-                    <TextBlock Text="IDE" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
-                    <Border Width="1" Height="16" Background="{DynamicResource QuantBorderSubtle}" Margin="8,0" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Spacing="9">
+                    <Border Width="9" Height="9" CornerRadius="5" Background="{DynamicResource QuantAccent}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Quant" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
+                    <Border Width="1" Height="16" Background="{DynamicResource QuantBorderSubtle}" Margin="6,0" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource QuantTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <Button Content="Theme" Padding="12,6" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle dark premium and light pro"/>
-                    <Button Content="Palette" Padding="12,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="Open command palette"/>
-                    <Button Content="Check engine" Padding="12,6" Command="{Binding CheckHealthCommand}"/>
+                    <Button Content="Theme" Padding="12,6" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
+                    <Button Content="Commands" Padding="12,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="All commands (Ctrl+Shift+P)"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -37,28 +37,47 @@
         <!-- Shell -->
         <Grid Grid.Row="1" ColumnDefinitions="48,300,*,360">
             <!-- Activity bar -->
-            <Border Grid.Column="0" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="0,8">
-                <StackPanel Spacing="4" HorizontalAlignment="Center">
-                    <Button Content="EX" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Explorer (Ctrl+Shift+E)"/>
-                    <Button Content="SE" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search (Ctrl+Shift+F)"/>
-                    <Button Content="GI" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
-                    <Button Content="CH" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Chat (Ctrl+Alt+C)"/>
-                    <Button Content="MO" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Models"/>
-                    <Button Content="ST" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
+            <Border Grid.Column="0" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="0,10">
+                <StackPanel Spacing="6" HorizontalAlignment="Stretch">
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavExplorer}"/>
+                        <Button Content="EX" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Files"/>
+                    </Grid>
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSearch}"/>
+                        <Button Content="SE" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search"/>
+                    </Grid>
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavGit}"/>
+                        <Button Content="GI" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
+                    </Grid>
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavChat}"/>
+                        <Button Content="CH" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Assistant"/>
+                    </Grid>
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavModels}"/>
+                        <Button Content="MO" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Assistants"/>
+                    </Grid>
+                    <Grid>
+                        <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSettings}"/>
+                        <Button Content="ST" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
+                    </Grid>
                 </StackPanel>
             </Border>
 
             <!-- Side panel V0.1.0 Explorer + Search -->
-            <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="12" IsVisible="{Binding SideVisible}">
+            <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="14" IsVisible="{Binding SideVisible}">
                 <Grid RowDefinitions="Auto,*,Auto">
-                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="{Binding ActiveActivity}" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="{Binding SideTitle}" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                         <Button Content="Hide" FontSize="11" DockPanel.Dock="Right" Command="{Binding ToggleSideCommand}"/>
                     </DockPanel>
                     <Grid Grid.Row="1">
                     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" IsVisible="{Binding ShowExplorer}">
                     <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,0,0,4"/>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+                        <Button Content="Open" FontSize="11" Command="{Binding RequestFolderCommand}" ToolTip.Tip="Open a folder"/>
                         <Button Content="New" FontSize="11" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
                         <Button Content="Folder" FontSize="11" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
                         <Button Content="Refresh" FontSize="11" Command="{Binding RefreshExplorerCommand}"/>
@@ -140,30 +159,32 @@
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowModels}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="MODELS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="ASSISTANTS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
                             <TextBlock Text="{Binding ModelStatus}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Drop any .gguf file into the models folder, then Refresh." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Open folder" FontSize="11" Command="{Binding OpenModelsFolderCommand}"/>
                                 <Button Content="Refresh" FontSize="11" Command="{Binding RefreshModelsCommand}"/>
-                                <Button Content="Unload" FontSize="11" Command="{Binding UnloadModelCommand}"/>
+                                <Button Content="Stop" FontSize="11" Command="{Binding UnloadModelCommand}" ToolTip.Tip="Free up memory"/>
                             </StackPanel>
                             <ListBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" Background="Transparent" MaxHeight="320">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Spacing="2" Margin="0,4">
-                                            <TextBlock Text="{Binding Id}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding File}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Load selected" FontSize="11" Command="{Binding LoadSelectedModelCommand}"/>
-                                <Button Content="Refresh index" FontSize="11" Command="{Binding RefreshIndexCommand}"/>
+                                <Button Content="Use selected" FontSize="11" Command="{Binding LoadSelectedModelCommand}"/>
+                                <Button Content="Refresh knowledge" FontSize="11" Command="{Binding RefreshIndexCommand}" ToolTip.Tip="Relearn the workspace"/>
                             </StackPanel>
                             <TextBlock Text="PRIVACY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
-                            <TextBlock Text="Local only. Index stays in ./index. No upload." FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
-                            <Button Content="Delete local index" FontSize="11" Command="{Binding ClearIndexCommand}"/>
+                            <TextBlock Text="Private by design. Everything stays on this device." FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                            <Button Content="Forget workspace" FontSize="11" Command="{Binding ClearIndexCommand}" ToolTip.Tip="Remove what was learned about this workspace"/>
                             <TextBlock Text="EXTENSIONS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Button Content="List" FontSize="11" Command="{Binding ListExtensionsCommand}"/>
@@ -243,8 +264,31 @@
                             <Button Content="Open prior version" FontSize="11" Command="{Binding ShowPriorVersionCommand}"/>
                         </StackPanel>
                     </ScrollViewer>
+                    <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowSettings}">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="SETTINGS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Appearance" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{Binding ThemeLabel}" FontSize="11" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
+                                    <TextBlock Text="Calm by default, bright when you need it." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="Assistant" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                <CheckBox Content="Code suggestions" IsChecked="{Binding CompleteEnabled}" FontSize="12"/>
+                                <CheckBox Content="Cloud assistant" IsChecked="{Binding CloudEnabled}" FontSize="12"/>
+                                <TextBlock Text="Off means everything stays on this device." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="Workspace" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                <Button Content="Commands" FontSize="11" Command="{Binding OpenPaletteCommand}" HorizontalAlignment="Left"/>
+                                <Button Content="Forget workspace" FontSize="11" Command="{Binding ClearIndexCommand}" HorizontalAlignment="Left" ToolTip.Tip="Remove what was learned about this workspace"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
                     </Grid>
-                    <TextBlock Grid.Row="2" Text="Explorer: right click. Search: SE. Models: MO." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,6,0,0"/>
+                    <TextBlock Grid.Row="2" Text="Tip: right-click any file for more actions." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                 </Grid>
             </Border>
 
@@ -259,8 +303,9 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}"/>
-                                <TextBlock Text="*" FontSize="12" Foreground="{DynamicResource QuantWarning}" IsVisible="{Binding IsDirty}"/>
+                                <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
+                                <TextBlock Text="*" FontSize="12" Foreground="{DynamicResource QuantWarning}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center"/>
+                                <Button Content="×" FontSize="11" Padding="7,2" Margin="2,0,0,0" VerticalAlignment="Center" Command="{Binding $parent[Window].DataContext.CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -276,14 +321,14 @@
                         <Button Content="Zen" FontSize="11" Command="{Binding ToggleZenCommand}"/>
                     </StackPanel>
                 </DockPanel>
-                <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1">
+                <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1" IsVisible="{Binding HasTabs}">
                     <Grid RowDefinitions="Auto,Auto,Auto,*">
                         <DockPanel Grid.Row="0" Margin="12,10,12,6">
                             <TextBlock Text="EDITOR" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                <Button Content="Side" FontSize="11" Command="{Binding ToggleSideCommand}"/>
-                                <Button Content="Panel" FontSize="11" Command="{Binding ToggleBottomCommand}"/>
-                                <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}"/>
+                                <Button Content="Files" FontSize="11" Command="{Binding ToggleSideCommand}" ToolTip.Tip="Show files"/>
+                                <Button Content="Console" FontSize="11" Command="{Binding ToggleBottomCommand}" ToolTip.Tip="Show console"/>
+                                <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}" ToolTip.Tip="Show assistant"/>
                             </StackPanel>
                         </DockPanel>
                         <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="12,0,12,6">
@@ -327,6 +372,20 @@
                         </Border>
                     </Grid>
                 </Border>
+                <Border Grid.Row="2" IsVisible="{Binding ShowWelcome}" Padding="24">
+                    <StackPanel Spacing="12" MaxWidth="440" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                            <Border Width="12" Height="12" CornerRadius="6" Background="{DynamicResource QuantAccent}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Welcome to Quant" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="Open a file from the left, or ask the assistant anything. Your code never leaves this device." FontSize="13" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Button Content="New file" FontSize="11" Command="{Binding NewFileCommand}"/>
+                            <Button Content="Commands" FontSize="11" Command="{Binding OpenPaletteCommand}"/>
+                            <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
                 <Grid Grid.Row="3" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
                         <Button Content="Problems" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
@@ -349,8 +408,8 @@
                         <Button Content="Start" FontSize="11" Command="{Binding StartLaunchCommand}"/>
                         <Button Content="Stop" FontSize="11" Command="{Binding StopLaunchCommand}"/>
                         <Button Content="Template" FontSize="11" Command="{Binding WriteLaunchTemplateCommand}"/>
-                        <Button Content="Matcher" FontSize="11" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Test problem matcher on sample"/>
-                        <Button Content="Copy fail" FontSize="11" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Copy failure output as chat context"/>
+                        <Button Content="Test" FontSize="11" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Check error detection on a sample"/>
+                        <Button Content="Copy output" FontSize="11" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Send the output to the assistant"/>
                     </StackPanel>
                     <Border Grid.Row="1" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                         <Grid>
@@ -389,6 +448,7 @@
                             <TextBlock Text="problems" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
                             <Button Content="Copy for chat" FontSize="11" Command="{Binding CopyProblemsForChatCommand}"/>
                         </StackPanel>
+                        <TextBlock Grid.Row="1" Text="All clear. No problems found." FontSize="12" Foreground="{DynamicResource QuantTextMuted}" IsVisible="{Binding NoProblems}" Margin="2,4,0,0"/>
                     <ListBox Grid.Row="1" ItemsSource="{Binding Problems}" Background="Transparent" MaxHeight="140">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -424,9 +484,9 @@
                     <ListBox ItemsSource="{Binding Approvals}" Background="Transparent" MaxHeight="140">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="8,6" Margin="0,4" CornerRadius="8" Background="{DynamicResource QuantSurface2}" BorderBrush="{DynamicResource QuantWarning}" BorderThickness="1">
+                                <Border Padding="10,8" Margin="0,4" CornerRadius="12" Background="{DynamicResource QuantSurface2}" BorderBrush="{DynamicResource QuantWarning}" BorderThickness="1">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Tool}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                        <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                         <TextBlock Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Button Content="Allow once" FontSize="11" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}"/>
@@ -464,13 +524,20 @@
                     </StackPanel>
                 </StackPanel>
                 <ListBox Grid.Row="3" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="10,8" Margin="0,4" CornerRadius="8"
+                    <ListBox.Resources>
+                        <DataTemplate x:Key="UserTpl" x:DataType="m:ChatMessage">
+                            <Border Padding="12,9" Margin="48,5,0,5" CornerRadius="14"
+                                    Background="{DynamicResource QuantChatUser}"
+                                    HorizontalAlignment="Right" MaxWidth="520">
+                                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate x:Key="AssistantTpl" x:DataType="m:ChatMessage">
+                            <Border Padding="12,10" Margin="0,5" CornerRadius="12"
                                     Background="{DynamicResource QuantChatAssistant}"
                                     BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
+                                    <TextBlock Text="{Binding Author}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
                                     <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Button Content="Copy code" FontSize="11" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}"/>
@@ -480,6 +547,9 @@
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
+                    </ListBox.Resources>
+                    <ListBox.ItemTemplate>
+                        <v:ChatTemplateSelector UserTemplate="{StaticResource UserTpl}" AssistantTemplate="{StaticResource AssistantTpl}"/>
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <Grid Grid.Row="4" RowDefinitions="Auto,Auto" Margin="12,0,12,12">
@@ -487,7 +557,7 @@
                         <Button Content="Send" FontSize="11" Command="{Binding SendCommand}" IsEnabled="{Binding !IsBusy}"/>
                         <Button Content="Agent" FontSize="11" Command="{Binding RunAgentCommand}"/>
                         <Button Content="Stop" FontSize="11" Command="{Binding StopChatCommand}" IsEnabled="{Binding IsBusy}"/>
-                        <Button Content="Undo apply" FontSize="11" Command="{Binding UndoDiffCommand}"/>
+                        <Button Content="Undo edit" FontSize="11" Command="{Binding UndoDiffCommand}"/>
                         <TextBlock Text="/explain /fix /tests /docs" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
@@ -498,16 +568,16 @@
             </Grid>
         </Grid>
 
-        <!-- Status bar V0.1.0 -->
-        <Border Grid.Row="2" Padding="12,7" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,0">
+        <!-- Status bar -->
+        <Border Grid.Row="2" Padding="14,8" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,0">
             <DockPanel>
-                <StackPanel Orientation="Horizontal" Spacing="16" DockPanel.Dock="Left">
-                    <TextBlock Text="V0.1.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
-                    <TextBlock Text="main" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}"/>
+                <StackPanel Orientation="Horizontal" Spacing="14" DockPanel.Dock="Left">
+                    <TextBlock Text="Quant 0.1.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                    <TextBlock Text="{Binding GitBranch, FallbackValue=main}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}"/>
                     <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}"/>
-                    <TextBlock Text="{Binding BottomTab}" FontSize="12" Foreground="{DynamicResource QuantTextMuted}"/>
+                    <TextBlock Text="{Binding StatusModel}" FontSize="12" Foreground="{DynamicResource QuantTextMuted}"/>
                 </StackPanel>
-                <TextBlock Text="Rust engine localhost  |  mmap GGUF Q4  |  Avalonia cross-platform" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                <TextBlock Text="Private • Runs on this device" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
             </DockPanel>
         </Border>
 
