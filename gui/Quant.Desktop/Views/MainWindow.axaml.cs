@@ -14,6 +14,19 @@ public partial class MainWindow : Window
 
         var editor = this.FindControl<AvaloniaEdit.TextEditor>("Editor");
         var tree = this.FindControl<TreeView>("ExplorerTree");
+        var composer = this.FindControl<TextBox>("Composer");
+        if (composer != null)
+        {
+            composer.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (s, e) =>
+            {
+                if (DataContext is not MainViewModel vm) return;
+                if (e.Key == Avalonia.Input.Key.Enter && !e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift))
+                {
+                    vm.SendCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        }
         if (editor != null)
         {
             editor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("C#");
@@ -81,6 +94,10 @@ public partial class MainWindow : Window
                         {
                             PickFolder();
                         }
+                        if (e.PropertyName == nameof(MainViewModel.PendingFileRequest) && vm.PendingFileRequest != null)
+                        {
+                            PickFile();
+                        }
                     };
                 }
             };
@@ -104,6 +121,23 @@ public partial class MainWindow : Window
                     vm.EnsureChildrenCommand.Execute(node);
             });
         }
+    }
+
+    private async void PickFile()
+    {
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+            {
+                Title = "Attach a file",
+                AllowMultiple = false,
+            });
+            if (files.Count > 0 && DataContext is MainViewModel vm)
+            {
+                vm.AddFileChipPath(files[0].Path.LocalPath);
+            }
+        }
+        catch { }
     }
 
     private async void PickFolder()

@@ -23,10 +23,17 @@ public sealed class ThreadService
 
     public ChatThread Active => Threads.First();
 
-    public void New(string title = "New thread")
+    public void New(string title = "New conversation")
     {
         Threads.Insert(0, new ChatThread { Title = title });
         Save();
+    }
+
+    public void Delete(string id)
+    {
+        Threads.RemoveAll(t => t.Id == id);
+        try { File.Delete(Path.Combine(_dir, id + ".json")); } catch { }
+        try { File.Delete(Path.Combine(_dir, id + ".md")); } catch { }
     }
 
     public void Save()

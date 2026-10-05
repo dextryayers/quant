@@ -50,6 +50,7 @@ public partial class MainViewModel : ViewModelBase
         ShowModels = ActiveActivity == "Models";
         ShowGit = ActiveActivity == "Git";
         ShowSettings = ActiveActivity == "Settings";
+        ShowChats = ActiveActivity == "Chat";
         SyncNav(ActiveActivity);
         Tabs.CollectionChanged += (_, __) =>
         {
@@ -260,6 +261,34 @@ public partial class MainViewModel : ViewModelBase
     public partial bool ShowSettings { get; set; } = false;
 
     [ObservableProperty]
+    public partial bool ShowChats { get; set; } = false;
+
+    public ObservableCollection<ChatThread> ThreadView { get; } = new();
+
+    [ObservableProperty]
+    public partial ChatThread? SelectedThread { get; set; }
+
+    [ObservableProperty]
+    public partial string ThreadSearch { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool NoThreads { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowSend { get; set; } = true;
+
+    public object? PendingFileRequest { get; private set; }
+
+    partial void OnIsBusyChanged(bool value) => ShowSend = !value;
+
+    partial void OnThreadSearchChanged(string value) => SyncThreads();
+
+    partial void OnSelectedThreadChanged(ChatThread? value)
+    {
+        if (value != null) OpenThread(value);
+    }
+
+    [ObservableProperty]
     public partial bool NoProblems { get; set; } = true;
 
     [ObservableProperty]
@@ -304,7 +333,7 @@ public partial class MainViewModel : ViewModelBase
             "Symbols" => "Symbols",
             "Models" => "Assistants",
             "Git" => "Source control",
-            "Chat" => "Assistant",
+            "Chat" => "Chats",
             "Settings" => "Settings",
             _ => "Files",
         };
@@ -375,10 +404,12 @@ public partial class MainViewModel : ViewModelBase
         ShowModels = id == "Models";
         ShowGit = id == "Git";
         ShowSettings = id == "Settings";
+        ShowChats = id == "Chat";
         if (id == "Chat")
         {
-            SideVisible = false;
+            SideVisible = true;
             RightVisible = true;
+            SyncThreads();
         }
         else
         {
@@ -528,8 +559,14 @@ public partial class MainViewModel : ViewModelBase
         if (PromptService.IsLocalCommand(raw, out var local))
         {
             if (local == "/context-clear") { Chips.Clear(); UpdateTokens(); PushToast("Context cleared", "", ""); }
-            else if (local == "/index-refresh") { RefreshExplorer(); PushToast("Index refreshed", "Explorer rebuilt.", ""); }
+            else if (local == "/index-refresh") { RefreshExplorer(); PushToast("Files refreshed", "", ""); }
             else PushToast(local, "queued", "");
+            return;
+        }
+        // Agent mode: one composer for everything, like Codex.
+        if (ChatMode == "Agent")
+        {
+            await RunAgentCore(raw);
             return;
         }
         var prompt = ExpandSlash(raw);
@@ -551,8 +588,8 @@ public partial class MainViewModel : ViewModelBase
                 assistant.Content = cloud;
                 var cidx = Messages.IndexOf(assistant);
                 Messages[cidx] = new ChatMessage { Role = "assistant", Content = cloud };
-                StatusText = "cloud connected";
-                PushToast("Reply ready", "Cloud reply completed", "");
+                StatusText = "Ready";
+                PushToast("Reply ready", "Finished writing.", "");
             }
             else
             {
@@ -636,7 +673,11 @@ public partial class MainViewModel : ViewModelBase
     {
         Roots.Clear();
         var nodes = _explorer.BuildRoots(_workspace.Roots, ExplorerFilter, ExplorerSort, ShowExcluded);
-        foreach (var n in nodes) Roots.Add(n);
+        foreach (var n in nodes)
+        {
+            n.IsExpanded = true;
+            Roots.Add(n);
+        }
         OutputLog += $"[explorer] {Roots.Count} roots filter='{ExplorerFilter}'\n";
         if (_explorer.LargeMode)
             PushToast("Large folder mode", "Over 100k entries. Showing indexed subset.", "");
@@ -1297,19 +1338,95 @@ public partial class MainViewModel : ViewModelBase
         ThreadList.Clear();
         foreach (var t in _threads.Threads) ThreadList.Add(t);
         ActiveThread = ThreadList.Count > 0 ? ThreadList[0] : null;
+        SyncThreads();
+    }
+
+    private void SyncThreads()
+    {
+        if (_threads == null) return;
+        var q = ThreadSearch.Trim();
+        ThreadView.Clear();
+        foreach (var t in _threads.Threads
+            .Where(t => q.Length == 0 || t.Title.Contains(q, System.StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(t => t.Updated)
+            .Take(50))
+            ThreadView.Add(t);
+        NoThreads = ThreadView.Count == 0;
     }
 
     [RelayCommand]
     private void NewThread()
     {
         EnsureThreads();
-        _threads!.New($"Thread {ThreadList.Count + 1}");
+        _threads!.New("New conversation");
         ThreadList.Clear();
         foreach (var t in _threads.Threads) ThreadList.Add(t);
+        SyncThreads();
         ActiveThread = ThreadList[0];
+        SelectedThread = ThreadView.Count > 0 ? ThreadView[0] : null;
         Messages.Clear();
         foreach (var m in ActiveThread.Messages) Messages.Add(m);
-        PushToast("New thread", ActiveThread.Title, "");
+        PushToast("New conversation", "Start fresh below.", "");
+    }
+
+    private void OpenThread(ChatThread t)
+    {
+        EnsureThreads();
+        t.Messages = t.Messages ?? new System.Collections.Generic.List<ChatMessage>();
+        ActiveThread = t;
+        Messages.Clear();
+        if (t.Messages.Count == 0)
+            Messages.Add(new ChatMessage { Role = "assistant", Content = "Welcome back. What are we working on?" });
+        else
+            foreach (var m in t.Messages) Messages.Add(m);
+        AgentStatus = "idle";
+        UpdateTokens();
+    }
+
+    [RelayCommand]
+    private void DeleteThread(ChatThread? t)
+    {
+        t ??= SelectedThread ?? ActiveThread;
+        if (t == null || _threads == null) return;
+        EnsureThreads();
+        _threads.Delete(t.Id);
+        ThreadList.Remove(t);
+        SyncThreads();
+        if (ActiveThread == t)
+        {
+            if (ThreadList.Count == 0) _threads.New("New conversation");
+            var next = ThreadList.Count > 0 ? ThreadList[0] : _threads.Threads[0];
+            if (!ThreadList.Contains(next)) ThreadList.Add(next);
+            SyncThreads();
+            OpenThread(next);
+        }
+        PushToast("Deleted", "The conversation is gone.", "");
+    }
+
+    [RelayCommand]
+    private void AttachFile()
+    {
+        PendingFileRequest = new object();
+        OnPropertyChanged(nameof(PendingFileRequest));
+    }
+
+    public void AddFileChipPath(string path)
+    {
+        try
+        {
+            var text = System.IO.File.ReadAllText(path);
+            if (text.Length > 16000) text = text[..16000];
+            Chips.Add(new ContextChip
+            {
+                Kind = "file",
+                Label = System.IO.Path.GetFileName(path),
+                Path = path,
+                Tokens = text.Length / 4,
+            });
+            UpdateTokens();
+            PushToast("Attached", System.IO.Path.GetFileName(path), "");
+        }
+        catch (System.Exception ex) { PushToast("Please try again", ex.Message, ""); }
     }
 
     [RelayCommand]
@@ -1487,7 +1604,16 @@ public partial class MainViewModel : ViewModelBase
         if (IsBusy || string.IsNullOrWhiteSpace(InputText)) return;
         var msg = InputText.Trim();
         InputText = "";
+        await RunAgentCore(msg);
+    }
+
+    private async Task RunAgentCore(string msg)
+    {
         AgentStatus = "planning";
+        IsBusy = true;
+        _chatCts?.Cancel();
+        _chatCts = new System.Threading.CancellationTokenSource();
+        var ct = _chatCts.Token;
         Messages.Add(new ChatMessage { Role = "user", Content = $"[{ChatMode}] {msg}" });
         var working = new ChatMessage { Role = "assistant", Content = "Working on it…" };
         Messages.Add(working);
@@ -1509,7 +1635,7 @@ public partial class MainViewModel : ViewModelBase
             var steps = await svc.RunAsync(ChatMode, msg, root, data =>
             {
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => OutputLog += $"[agent] {data}\n");
-            });
+            }, ct);
             var executed = 0;
             foreach (var (type, tool, text) in steps)
             {
@@ -1540,14 +1666,14 @@ public partial class MainViewModel : ViewModelBase
                 {
                     if (tool == "grep")
                     {
-                        var body = await svc.GrepAsync(msg, root);
+                        var body = await svc.GrepAsync(msg, root, ct);
                         var n = CountHits(body);
                         Avalonia.Threading.Dispatcher.UIThread.Post(() => Step($"• Searched the workspace — {n} hits"));
                         executed++;
                     }
                     else if (tool == "glob")
                     {
-                        await svc.GlobAsync("**/*", root);
+                        await svc.GlobAsync("**/*", root, ct);
                         Avalonia.Threading.Dispatcher.UIThread.Post(() => Step("• Listed matching files"));
                         executed++;
                     }
@@ -1578,15 +1704,29 @@ public partial class MainViewModel : ViewModelBase
             {
                 ActiveThread.Messages = new System.Collections.Generic.List<ChatMessage>(Messages);
                 ActiveThread.Updated = System.DateTime.Now;
+                if (ActiveThread.Title is "New conversation" or "Welcome")
+                    ActiveThread.Title = msg.Length > 40 ? msg[..40] : msg;
                 _threads!.Save();
             }
+            SyncThreads();
+            UpdateTokens();
+        }
+        catch (OperationCanceledException)
+        {
+            AgentStatus = "idle";
+            working.Content += "\n• Stopped. Kept what was found so far.";
+            RefreshWorking();
         }
         catch (System.Exception ex)
         {
             AgentStatus = "error";
-            working.Content += $"\n• Something went wrong ({ex.Message}).";
+            working.Content += "\n• Something went wrong. Please try again.";
             RefreshWorking();
-            PushToast("Agent failed", ex.Message, "");
+            PushToast("Please try again", ex.Message, "");
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
