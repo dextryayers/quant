@@ -1,0 +1,214 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Quant.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ae="using:AvaloniaEdit"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+        x:Class="Quant.Desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Quant IDE - AI Code (Rust engine + GGUF)"
+        Background="{DynamicResource QuantBgBase}">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Top bar -->
+        <Border Grid.Row="0" Padding="12,8" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left" Spacing="8">
+                    <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource QuantAccent}" VerticalAlignment="Center"/>
+                    <TextBlock Text="QUANT" FontWeight="SemiBold" FontSize="13" LetterSpacing="2" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
+                    <TextBlock Text="IDE" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                    <Border Width="1" Height="16" Background="{DynamicResource QuantBorderSubtle}" Margin="8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource QuantTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                    <Button Content="Theme" Padding="12,6" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle dark premium and light pro"/>
+                    <Button Content="Palette" Padding="12,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="Open command palette"/>
+                    <Button Content="Check engine" Padding="12,6" Command="{Binding CheckHealthCommand}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Shell -->
+        <Grid Grid.Row="1" ColumnDefinitions="48,300,*,360">
+            <!-- Activity bar -->
+            <Border Grid.Column="0" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="0,8">
+                <StackPanel Spacing="4" HorizontalAlignment="Center">
+                    <Button Content="EX" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Explorer (Ctrl+Shift+E)"/>
+                    <Button Content="SE" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search (Ctrl+Shift+F)"/>
+                    <Button Content="CH" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Chat (Ctrl+Alt+C)"/>
+                    <Button Content="MO" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Models"/>
+                    <Button Content="ST" Width="36" Height="36" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Side panel V0.1.0 Explorer -->
+            <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="12" IsVisible="{Binding SideVisible}">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+                    <DockPanel Grid.Row="0">
+                        <TextBlock Text="EXPLORER" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <Button Content="Hide" FontSize="11" DockPanel.Dock="Right" Command="{Binding ToggleSideCommand}"/>
+                    </DockPanel>
+                    <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,8,0,4"/>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+                        <Button Content="New" FontSize="11" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
+                        <Button Content="Folder" FontSize="11" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
+                        <Button Content="Refresh" FontSize="11" Command="{Binding RefreshExplorerCommand}"/>
+                    </StackPanel>
+                    <TreeView Grid.Row="3" Name="ExplorerTree" ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}">
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{Binding Icon}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Width="14"/>
+                                    <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                </StackPanel>
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Open" Command="{Binding $parent[Window].DataContext.OpenFileCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="New File" Command="{Binding $parent[Window].DataContext.NewFileCommand}"/>
+                                <MenuItem Header="New Folder" Command="{Binding $parent[Window].DataContext.NewFolderCommand}"/>
+                                <Separator/>
+                                <MenuItem Header="Rename" Command="{Binding $parent[Window].DataContext.RenameNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="Duplicate" Command="{Binding $parent[Window].DataContext.DuplicateNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="Delete" Command="{Binding $parent[Window].DataContext.DeleteNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <Separator/>
+                                <MenuItem Header="Copy" Command="{Binding $parent[Window].DataContext.CopyNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="Cut" Command="{Binding $parent[Window].DataContext.CutNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="Paste" Command="{Binding $parent[Window].DataContext.PasteNodeCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <Separator/>
+                                <MenuItem Header="Copy Path" Command="{Binding $parent[Window].DataContext.CopyPathCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <MenuItem Header="Reveal in OS" Command="{Binding $parent[Window].DataContext.RevealInOSCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
+                    </TreeView>
+                    <TextBlock Grid.Row="4" Text="Right click for full actions. Delete offers 10s undo." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- Center V0.1.0: tabs + breadcrumbs + editor + bottom -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*,200">
+                <ListBox Grid.Row="0" ItemsSource="{Binding Tabs}" SelectedItem="{Binding ActiveTab}" Background="{DynamicResource QuantSurface1}" Margin="0" Padding="8,4">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                <TextBlock Text="*" FontSize="12" Foreground="{DynamicResource QuantWarning}" IsVisible="{Binding IsDirty}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <DockPanel Grid.Row="1" Margin="12,6,12,2">
+                    <TextBlock Text="{Binding Breadcrumbs}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Content="Save" FontSize="11" Command="{Binding SaveTabCommand}"/>
+                        <Button Content="Save All" FontSize="11" Command="{Binding SaveAllTabsCommand}"/>
+                        <Button Content="Close" FontSize="11" Command="{Binding CloseTabCommand}"/>
+                        <Button Content="Zen" FontSize="11" Command="{Binding ToggleZenCommand}"/>
+                    </StackPanel>
+                </DockPanel>
+                <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1">
+                    <Grid RowDefinitions="Auto,*">
+                        <DockPanel Grid.Row="0" Margin="12,10,12,6">
+                            <TextBlock Text="EDITOR" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                <Button Content="Side" FontSize="11" Command="{Binding ToggleSideCommand}"/>
+                                <Button Content="Panel" FontSize="11" Command="{Binding ToggleBottomCommand}"/>
+                                <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <ae:TextEditor Grid.Row="1" Margin="12,0,12,12"
+                                       Name="Editor"
+                                       ShowLineNumbers="True"
+                                       FontFamily="Cascadia Code,Consolas,Monospace"
+                                       FontSize="14"
+                                       Background="{DynamicResource QuantEditorBg}"
+                                       Foreground="{DynamicResource QuantTextPrimary}"
+                                       HorizontalScrollBarVisibility="Auto"
+                                       VerticalScrollBarVisibility="Auto"/>
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="3" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
+                        <Button Content="Problems" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
+                        <Button Content="Output" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
+                        <Button Content="Terminal" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal"/>
+                        <Button Content="Tasks" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Tasks"/>
+                    </StackPanel>
+                    <Border Grid.Row="1" Margin="12,0,12,8" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                        <ScrollViewer>
+                            <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Right assistant -->
+            <Grid Grid.Column="3" RowDefinitions="Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
+                <DockPanel Grid.Row="0" Margin="12,10,12,6">
+                    <TextBlock Text="ASSISTANT" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                    <TextBlock Text="Ask, Edit, Agent" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                </DockPanel>
+                <ListBox Grid.Row="1" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="10,8" Margin="0,4" CornerRadius="8"
+                                    Background="{DynamicResource QuantChatAssistant}"
+                                    BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
+                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="12,0,12,12">
+                    <TextBox Grid.Column="0" Text="{Binding InputText}" Watermark="Ask about code, or type / for commands" Padding="10,8"/>
+                    <Button Grid.Column="1" Content="Send" Margin="8,0,0,0" Padding="16,8" Command="{Binding SendCommand}" IsEnabled="{Binding !IsBusy}"/>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Status bar V0.1.0 -->
+        <Border Grid.Row="2" Padding="12,7" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" Spacing="16" DockPanel.Dock="Left">
+                    <TextBlock Text="V0.1.0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                    <TextBlock Text="main" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}"/>
+                    <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}"/>
+                    <TextBlock Text="{Binding BottomTab}" FontSize="12" Foreground="{DynamicResource QuantTextMuted}"/>
+                </StackPanel>
+                <TextBlock Text="Rust engine localhost  |  mmap GGUF Q4  |  Avalonia cross-platform" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Toast host overlay -->
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,372,12" Width="340">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="10,8" Margin="0,4" CornerRadius="8" Background="{DynamicResource QuantOverlay}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="X" Margin="8,0,0,0" Padding="8,4" Command="{Binding $parent[Window].DataContext.DismissToastCommand}" CommandParameter="{Binding}"/>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</Window>

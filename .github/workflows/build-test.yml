@@ -1,0 +1,31 @@
+name: build-test
+on:
+  push:
+  pull_request:
+
+jobs:
+  gui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build Quant.slnx -v minimal
+      - run: dotnet publish gui/Quant.Desktop/Quant.Desktop.csproj -c Release -o dist/gui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-windows-x64
+          path: dist/gui
+
+  engine:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p quant-engine --manifest-path engine/quant-engine/Cargo.toml
+      - run: cargo build --release -p quant-engine --manifest-path engine/quant-engine/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-windows-x64
+          path: engine/quant-engine/target/release/quant-engine.exe

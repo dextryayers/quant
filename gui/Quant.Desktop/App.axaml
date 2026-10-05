@@ -1,0 +1,39 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Quant.Desktop.App"
+             xmlns:local="using:Quant.Desktop"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme />
+    </Application.Styles>
+
+    <Application.Resources>
+        <!-- Quant Premium Tokens - restrained, no gradient abuse, no purple slop -->
+        <SolidColorBrush x:Key="QuantBgBase">#0F1115</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantSurface1">#151923</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantSurface2">#1C2230</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantOverlay">#1E2636</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantBorderSubtle">#2A3346</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantBorderStrong">#3A4763</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantTextPrimary">#E8ECF3</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantTextSecondary">#9AA4B8</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantTextMuted">#6B7690</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantAccent">#6E9DFF</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantAccentSoft">#22345E</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantSuccess">#3FB68B</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantWarning">#E5A63D</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantDanger">#E5626E</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantEditorBg">#0F1115</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantChatUser">#1E2A44</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantChatAssistant">#151923</SolidColorBrush>
+        <x:Double x:Key="QuantRadiusS">6</x:Double>
+        <x:Double x:Key="QuantRadiusM">8</x:Double>
+        <x:Double x:Key="QuantRadiusL">12</x:Double>
+    </Application.Resources>
+</Application>

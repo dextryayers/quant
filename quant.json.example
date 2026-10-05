@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "engine": { "port": 3737, "host": "127.0.0.1", "token": "auto", "idleUnloadMinutes": 15, "autoStart": true },
+  "models": { "active": "qwen2.5-coder-7b-q4_k_m", "context": 8192, "keepLoaded": false },
+  "index": { "enabled": true, "exclude": ["node_modules", "target", "bin", "obj", ".git", "dist"], "maxFileMB": 2 },
+  "agent": { "mode": "Edit", "maxSteps": 12, "allow": { "read": "allow", "write": "ask", "exec": "ask" } },
+  "ui": { "theme": "dark-premium", "fontCode": "Cascadia Code", "fontSize": 14, "minimap": false, "autoSave": "afterDelay" },
+  "privacy": { "telemetry": false }
+}
