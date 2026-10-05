@@ -439,10 +439,10 @@
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="2" Width="5" Background="Transparent" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="2" Width="7" Background="Transparent" ResizeDirection="Columns" ToolTip.Tip="Drag to resize" />
 
-            <!-- Center: tabs + breadcrumbs + editor + bottom -->
-            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,*,Auto,200">
+            <!-- Center: tabs + breadcrumbs + editor + splitter + bottom -->
+            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,*,Auto,Auto">
                 <ListBox Grid.Row="0" ItemsSource="{Binding Tabs}" SelectedItem="{Binding ActiveTab}" Background="{DynamicResource QuantSurface1}" Margin="0" Padding="8,4">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -567,8 +567,8 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
-                <GridSplitter Grid.Row="3" Height="5" Background="Transparent" ResizeDirection="Rows" />
-                <Grid Grid.Row="4" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}" MinHeight="120">
+                <GridSplitter Grid.Row="3" Height="7" Background="Transparent" ResizeDirection="Rows" ToolTip.Tip="Drag to resize" />
+                <Grid Grid.Row="4" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}" MinHeight="140" MaxHeight="420" ClipToBounds="True">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
                         <Button Content="Problems" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
                         <Button Content="Output" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
@@ -625,13 +625,13 @@
                         <Button Content="Test" FontSize="11" Classes="ghost" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Check error detection on a sample" Margin="0,0,6,4"/>
                         <Button Content="Copy output" FontSize="11" Classes="ghost" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Send the output to the assistant" Margin="0,0,0,4"/>
                     </WrapPanel>
-                    <Border Grid.Row="1" Padding="6" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                    <Border Grid.Row="1" Padding="6" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                         <Grid>
                         <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
-                        <Border Background="{DynamicResource QuantEditorBg}" CornerRadius="8" IsVisible="{Binding ShowTerminalView}">
-                            <v:TerminalView Name="TermView" Session="{Binding ActiveTerminal}" MinHeight="120" />
+                        <Border Background="{DynamicResource QuantEditorBg}" CornerRadius="8" ClipToBounds="True" IsVisible="{Binding ShowTerminalView}">
+                            <v:TerminalView Name="TermView" Session="{Binding ActiveTerminal}" MinHeight="100" />
                         </Border>
                         <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
                             <ListBox.ItemTemplate>
