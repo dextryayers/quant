@@ -8,6 +8,9 @@ public sealed class EngineModel
     public bool Loaded { get; set; }
     public double? RamMb { get; set; }
     public bool IsPreset { get; set; }
+    public string HfRepo { get; set; } = "";
+    public string Filename { get; set; } = "";
+    public bool CanDelete => !IsPreset && !Loaded;
 
     // Friendly product names. Internal file and quant details stay out of the UI.
     public string DisplayName

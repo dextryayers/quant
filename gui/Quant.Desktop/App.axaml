@@ -11,11 +11,69 @@
 
     <Application.Styles>
         <FluentTheme />
-        <!-- Soft modern defaults: rounded, calm, consistent everywhere -->
+        <!-- Button system: calm secondary base, clear primary, quiet ghost -->
         <Style Selector="Button">
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="9"/>
             <Setter Property="Padding" Value="12,7"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource QuantSurface2}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource QuantBorderSubtle}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantTextPrimary}"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource QuantBorderStrong}"/>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="Background" Value="{DynamicResource QuantOverlay}"/>
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource QuantAccent}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantOnAccent}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource QuantAccentHover}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantOnAccent}"/>
+        </Style>
+        <Style Selector="Button.primary:pressed">
+            <Setter Property="Background" Value="{DynamicResource QuantAccent}"/>
+        </Style>
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantTextSecondary}"/>
+        </Style>
+        <Style Selector="Button.ghost:pointerover">
+            <Setter Property="Background" Value="{DynamicResource QuantSurface2}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantTextPrimary}"/>
+        </Style>
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantTextMuted}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Background" Value="{DynamicResource QuantSurface2}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantTextPrimary}"/>
+        </Style>
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource QuantDanger}"/>
+            <Setter Property="Foreground" Value="{DynamicResource QuantDanger}"/>
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="{DynamicResource QuantDanger}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource QuantDanger}"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
         </Style>
         <Style Selector="TextBox">
             <Setter Property="CornerRadius" Value="8"/>
@@ -49,7 +107,9 @@
         <SolidColorBrush x:Key="QuantTextSecondary">#A7A7B3</SolidColorBrush>
         <SolidColorBrush x:Key="QuantTextMuted">#71717C</SolidColorBrush>
         <SolidColorBrush x:Key="QuantAccent">#8FA2FF</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantAccentHover">#A3B2FF</SolidColorBrush>
         <SolidColorBrush x:Key="QuantAccentSoft">#262C4E</SolidColorBrush>
+        <SolidColorBrush x:Key="QuantOnAccent">#101014</SolidColorBrush>
         <SolidColorBrush x:Key="QuantSuccess">#43C488</SolidColorBrush>
         <SolidColorBrush x:Key="QuantWarning">#D9A648</SolidColorBrush>
         <SolidColorBrush x:Key="QuantDanger">#E5484D</SolidColorBrush>

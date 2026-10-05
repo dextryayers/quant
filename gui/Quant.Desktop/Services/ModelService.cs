@@ -54,6 +54,8 @@ public sealed class ModelService : IDisposable
                         SizeMb = p.GetProperty("size_mb").GetDouble(),
                         Loaded = false,
                         IsPreset = true,
+                        HfRepo = p.TryGetProperty("hf_repo", out var h) ? h.GetString() ?? "" : "",
+                        Filename = p.GetProperty("filename").GetString() ?? "",
                     });
                 }
             }
@@ -82,6 +84,64 @@ public sealed class ModelService : IDisposable
         var body = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = JsonDocument.Parse(body);
         return doc.RootElement.GetProperty("job_id").GetString() ?? "";
+    }
+
+    public sealed class DownloadProgress
+    {
+        public string State { get; set; } = "";
+        public double Percent { get; set; }
+        public string Message { get; set; } = "";
+        public bool Finished { get; set; }
+    }
+
+    public async Task WatchDownloadAsync(string jobId, Action<DownloadProgress> onUpdate, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"/v1/models/download/progress?job_id={Uri.EscapeDataString(jobId)}");
+        using var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        res.EnsureSuccessStatusCode();
+        await using var stream = await res.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        using var reader = new System.IO.StreamReader(stream);
+        while (!ct.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+            if (line == null) break;
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            var data = line["data:".Length..].Trim();
+            if (data == "[DONE]") break;
+            try
+            {
+                using var doc = JsonDocument.Parse(data);
+                var root = doc.RootElement;
+                var state = root.TryGetProperty("state", out var st) ? st.GetString() ?? "" : "";
+                var bytes = root.TryGetProperty("bytes", out var b) ? b.GetDouble() : 0;
+                var total = root.TryGetProperty("total", out var t) && t.ValueKind == JsonValueKind.Number ? t.GetDouble() : 0;
+                var msg = root.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
+                var done = state is "done" or "error" or "cancelled";
+                onUpdate(new DownloadProgress
+                {
+                    State = state,
+                    Percent = total > 0 ? Math.Min(100, bytes / total * 100) : 0,
+                    Message = msg,
+                    Finished = done,
+                });
+                if (done) break;
+            }
+            catch { }
+        }
+    }
+
+    public async Task CancelDownloadAsync(string jobId, CancellationToken ct = default)
+    {
+        var json = JsonSerializer.Serialize(new { job_id = jobId });
+        await _http.PostAsync("/v1/models/download/cancel", new StringContent(json, Encoding.UTF8, "application/json"), ct).ConfigureAwait(false);
+    }
+
+    public async Task<string> DeleteAsync(string id, CancellationToken ct = default)
+    {
+        var json = JsonSerializer.Serialize(new { id });
+        var res = await _http.PostAsync("/v1/models/delete", new StringContent(json, Encoding.UTF8, "application/json"), ct).ConfigureAwait(false);
+        return await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<List<RagHit>> CodeSearchAsync(string baseUrl, string query, int topK = 5)

@@ -270,6 +270,54 @@ async fn download_progress(
 }
 
 #[derive(Debug, Deserialize)]
+struct DownloadCancelReq {
+    job_id: String,
+}
+
+async fn download_cancel(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<DownloadCancelReq>,
+) -> Json<serde_json::Value> {
+    s.downloader.cancel(&req.job_id);
+    Json(serde_json::json!({"status":"cancelled","job_id":req.job_id}))
+}
+
+#[derive(Debug, Deserialize)]
+struct DeleteModelReq {
+    id: String,
+}
+
+async fn delete_model(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<DeleteModelReq>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    // Refuse while loaded. Only files inside the models dir, never elsewhere.
+    if s.llama.is_loaded() && s.llama.active_id().as_deref() == Some(req.id.as_str()) {
+        return (StatusCode::CONFLICT, Json(serde_json::json!({"error":{"code":"IN_USE","message":"Stop the assistant first"}})));
+    }
+    let path = match s.manager.read().await.file_for(&req.id) {
+        Some(p) => p,
+        None => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error":{"code":"MODEL_NOT_FOUND","message":"nothing to delete"}})));
+        }
+    };
+    // Jail: only basenames inside the models dir.
+    if path.parent().map(|p| p != s.models_dir).unwrap_or(true) {
+        return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error":{"code":"PATH_ESCAPE","message":"outside models dir"}})));
+    }
+    if !path.is_file() {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error":{"code":"MODEL_NOT_FOUND","message":"file not downloaded yet"}})));
+    }
+    let mut sidecar = path.as_os_str().to_owned();
+    sidecar.push(".json");
+    let _ = std::fs::remove_file(std::path::PathBuf::from(sidecar));
+    match std::fs::remove_file(&path) {
+        Ok(()) => (StatusCode::OK, Json(serde_json::json!({"status":"deleted","id":req.id}))),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error":{"code":"DELETE_FAILED","message":e.to_string()}}))),
+    }
+}
+
+#[derive(Debug, Deserialize)]
 struct IndexReq {
     roots: Vec<String>,
     #[serde(default)]
@@ -951,6 +999,8 @@ async fn main() {
         .route("/v1/models/active", get(active_model))
         .route("/v1/models/download", post(download_model))
         .route("/v1/models/download/progress", get(download_progress))
+        .route("/v1/models/download/cancel", post(download_cancel))
+        .route("/v1/models/delete", post(delete_model))
         .route("/v1/index/refresh", post(index_refresh))
         .route("/v1/search", get(file_search))
         .route("/v1/search/code", post(code_search))

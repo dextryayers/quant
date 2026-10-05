@@ -28,7 +28,7 @@
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource QuantTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <Button Content="Theme" Padding="12,6" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
+                    <Button Content="Theme" Padding="12,6" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
                     <Button Content="Commands" Padding="12,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="All commands (Ctrl+Shift+P)"/>
                 </StackPanel>
             </DockPanel>
@@ -71,16 +71,16 @@
                 <Grid RowDefinitions="Auto,*,Auto">
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
                         <TextBlock Text="{Binding SideTitle}" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                        <Button Content="Hide" FontSize="11" DockPanel.Dock="Right" Command="{Binding ToggleSideCommand}"/>
+                        <Button Content="Hide" FontSize="11" Classes="ghost" DockPanel.Dock="Right" Command="{Binding ToggleSideCommand}"/>
                     </DockPanel>
                     <Grid Grid.Row="1">
                     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" IsVisible="{Binding ShowExplorer}">
                     <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,0,0,4"/>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
-                        <Button Content="Open" FontSize="11" Command="{Binding RequestFolderCommand}" ToolTip.Tip="Open a folder"/>
-                        <Button Content="New" FontSize="11" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
-                        <Button Content="Folder" FontSize="11" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
-                        <Button Content="Refresh" FontSize="11" Command="{Binding RefreshExplorerCommand}"/>
+                        <Button Content="Open" FontSize="11" Classes="ghost" Command="{Binding RequestFolderCommand}" ToolTip.Tip="Open a folder"/>
+                        <Button Content="New" FontSize="11" Classes="ghost" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
+                        <Button Content="Folder" FontSize="11" Classes="ghost" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
+                        <Button Content="Refresh" FontSize="11" Classes="ghost" Command="{Binding RefreshExplorerCommand}"/>
                     </StackPanel>
                     <TreeView Grid.Row="3" Name="ExplorerTree" ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}">
                         <TreeView.ItemTemplate>
@@ -127,8 +127,8 @@
                                 <CheckBox Content="Word" IsChecked="{Binding SearchWord}" FontSize="11"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Search" FontSize="11" Command="{Binding RunSearchCommand}"/>
-                                <Button Content="Stop" FontSize="11" Command="{Binding StopSearchCommand}"/>
+                                <Button Content="Search" FontSize="11" Classes="primary" Command="{Binding RunSearchCommand}"/>
+                                <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding StopSearchCommand}"/>
                             </StackPanel>
                             <TextBlock Text="{Binding SearchStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
                             <TextBox Text="{Binding ReplaceText}" Watermark="Replace with" Padding="8,6"/>
@@ -159,28 +159,54 @@
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowModels}">
-                        <StackPanel Spacing="10">
+                        <StackPanel Spacing="12">
                             <TextBlock Text="ASSISTANTS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
-                            <TextBlock Text="{Binding ModelStatus}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
-                            <TextBlock Text="Drop a model file into the folder, then Refresh." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Open folder" FontSize="11" Command="{Binding OpenModelsFolderCommand}"/>
-                                <Button Content="Refresh" FontSize="11" Command="{Binding RefreshModelsCommand}"/>
-                                <Button Content="Stop" FontSize="11" Command="{Binding UnloadModelCommand}" ToolTip.Tip="Free up memory"/>
+                            <Border Padding="12,10" CornerRadius="12" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantAccent}" BorderThickness="1">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding StatusModel}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                    <TextBlock Text="{Binding ModelStatus}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+                                        <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding UnloadModelCommand}" ToolTip.Tip="Free up memory"/>
+                                        <Button Content="Open folder" FontSize="11" Classes="ghost" Command="{Binding OpenModelsFolderCommand}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="GET MORE" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                                <TextBlock Text="Drop a model file into the folder, or get one below." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
+                                <ListBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" Background="Transparent" MaxHeight="220">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                                                <StackPanel Grid.Column="0" Spacing="1">
+                                                    <TextBlock Text="{Binding DisplayName}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                    <Button Content="Get" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.DownloadPresetCommand}" CommandParameter="{Binding}" ToolTip.Tip="Download" IsVisible="{Binding IsPreset}"/>
+                                                    <Button Content="Use" FontSize="11" Command="{Binding $parent[Window].DataContext.LoadModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Switch to this one" IsVisible="{Binding !IsPreset}"/>
+                                                    <Button Content="×" FontSize="11" Padding="8,3" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this device" IsVisible="{Binding CanDelete}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <Border Padding="10,8" CornerRadius="10" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding Downloading}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding DownloadStatus}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Height="6" CornerRadius="3"/>
+                                        <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding CancelDownloadCommand}" HorizontalAlignment="Left"/>
+                                    </StackPanel>
+                                </Border>
+                                <TextBox Text="{Binding DownloadRepo}" Watermark="Source, e.g. Qwen/Example-GGUF" Padding="8,6"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Grid.Column="0" Text="{Binding DownloadFile}" Watermark="File name" Padding="8,6" Margin="0,0,6,0"/>
+                                    <Button Grid.Column="1" Content="Get" FontSize="11" Classes="primary" Command="{Binding DownloadCustomCommand}"/>
+                                </Grid>
                             </StackPanel>
-                            <ListBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" Background="Transparent" MaxHeight="320">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Spacing="2" Margin="0,4">
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Use selected" FontSize="11" Command="{Binding LoadSelectedModelCommand}"/>
-                                <Button Content="Refresh knowledge" FontSize="11" Command="{Binding RefreshIndexCommand}" ToolTip.Tip="Relearn the workspace"/>
+                                <Button Content="Use selected" FontSize="11" Classes="primary" Command="{Binding LoadSelectedModelCommand}"/>
+                                <Button Content="Refresh knowledge" FontSize="11" Classes="ghost" Command="{Binding RefreshIndexCommand}" ToolTip.Tip="Relearn the workspace"/>
                             </StackPanel>
                             <TextBlock Text="PRIVACY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <TextBlock Text="Private by design. Everything stays on this device." FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>

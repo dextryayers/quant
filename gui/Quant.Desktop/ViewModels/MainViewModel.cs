@@ -136,7 +136,25 @@ public partial class MainViewModel : ViewModelBase
     public partial EngineModel? SelectedModel { get; set; }
 
     [ObservableProperty]
-    public partial string ModelStatus { get; set; } = "No model loaded. Presets work offline after download.";
+    public partial string ModelStatus { get; set; } = "Pick an assistant to begin. Everything runs on this device.";
+
+    [ObservableProperty]
+    public partial string DownloadRepo { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string DownloadFile { get; set; } = "";
+
+    [ObservableProperty]
+    public partial double DownloadProgress { get; set; } = 0;
+
+    [ObservableProperty]
+    public partial bool Downloading { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string DownloadStatus { get; set; } = "";
+
+    private string _downloadJob = "";
+    private System.Threading.CancellationTokenSource? _downloadCts;
 
     [ObservableProperty]
     public partial string ExplorerFilter { get; set; } = "";
@@ -1499,6 +1517,14 @@ public partial class MainViewModel : ViewModelBase
         await LoadModelAsync(id);
     }
 
+    [RelayCommand]
+    private async Task LoadModel(EngineModel? m)
+    {
+        m ??= SelectedModel;
+        if (m == null || string.IsNullOrWhiteSpace(m.Id)) return;
+        await LoadModelAsync(m.Id);
+    }
+
     private static string FriendlyModel(string id, System.Collections.Generic.IEnumerable<EngineModel> models)
     {
         foreach (var m in models)
@@ -1545,6 +1571,107 @@ public partial class MainViewModel : ViewModelBase
             PushToast("Paused", "It will wake up when you need it.", "");
         }
         catch { PushToast("Please try again", "That did not go through.", ""); }
+    }
+
+    [RelayCommand]
+    private async Task DownloadPreset(EngineModel? m)
+    {
+        m ??= SelectedModel;
+        if (m == null || string.IsNullOrWhiteSpace(m.HfRepo)) return;
+        await DownloadAsync(m.HfRepo, m.Filename, m.DisplayName);
+    }
+
+    [RelayCommand]
+    private async Task DownloadCustom()
+    {
+        if (string.IsNullOrWhiteSpace(DownloadRepo) || string.IsNullOrWhiteSpace(DownloadFile))
+        {
+            PushToast("Missing details", "Fill in both the source and the file name.", "");
+            return;
+        }
+        await DownloadAsync(DownloadRepo.Trim(), DownloadFile.Trim(), "assistant");
+    }
+
+    private async Task DownloadAsync(string repo, string file, string name)
+    {
+        if (Downloading) return;
+        Downloading = true;
+        DownloadProgress = 0;
+        DownloadStatus = $"Getting {name}…";
+        _downloadCts = new System.Threading.CancellationTokenSource();
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            _downloadJob = await svc.StartDownloadAsync(repo, file, _downloadCts.Token);
+            await svc.WatchDownloadAsync(_downloadJob, p =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    DownloadProgress = p.Percent;
+                    DownloadStatus = p.State switch
+                    {
+                        "downloading" => $"Getting {name}… {p.Percent:F0}%{SpeedOf(p.Message)}",
+                        "verifying" => $"Checking {name}…",
+                        "done" => $"{name} is ready.",
+                        "error" => "Something went wrong. Please try again.",
+                        "cancelled" => "Stopped.",
+                        _ => p.Message,
+                    };
+                    if (p.Finished)
+                    {
+                        Downloading = false;
+                        _ = RefreshModelsAsync();
+                    }
+                });
+            }, _downloadCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Downloading = false;
+            DownloadStatus = "Stopped.";
+        }
+        catch (System.Exception ex)
+        {
+            Downloading = false;
+            DownloadStatus = "Something went wrong.";
+            PushToast("Please try again", ex.Message, "");
+        }
+    }
+
+    private static string SpeedOf(string message)
+    {
+        // Engine reports bytes; keep the status line human.
+        return string.IsNullOrWhiteSpace(message) || message.StartsWith("GET") ? "" : $" ({message})";
+    }
+
+    [RelayCommand]
+    private async Task CancelDownload()
+    {
+        if (string.IsNullOrEmpty(_downloadJob)) return;
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            await svc.CancelDownloadAsync(_downloadJob);
+        }
+        catch { }
+        _downloadCts?.Cancel();
+        Downloading = false;
+        DownloadStatus = "Stopped.";
+    }
+
+    [RelayCommand]
+    private async Task DeleteModel(EngineModel? m)
+    {
+        m ??= SelectedModel;
+        if (m == null || !m.CanDelete) return;
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            var body = await svc.DeleteAsync(m.Id);
+            await RefreshModelsAsync();
+            PushToast(body.Contains("deleted") ? "Removed" : "Please try again", m.DisplayName, "");
+        }
+        catch (System.Exception ex) { PushToast("Please try again", ex.Message, ""); }
     }
 
     [RelayCommand]
