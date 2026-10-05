@@ -47,14 +47,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- Side panel V0.1.0 Explorer -->
+            <!-- Side panel V0.1.0 Explorer + Search -->
             <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="12" IsVisible="{Binding SideVisible}">
-                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
-                    <DockPanel Grid.Row="0">
-                        <TextBlock Text="EXPLORER" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding ActiveActivity}" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                         <Button Content="Hide" FontSize="11" DockPanel.Dock="Right" Command="{Binding ToggleSideCommand}"/>
                     </DockPanel>
-                    <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,8,0,4"/>
+                    <Grid Grid.Row="1">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" IsVisible="{Binding ShowExplorer}">
+                    <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,0,0,4"/>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
                         <Button Content="New" FontSize="11" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
                         <Button Content="Folder" FontSize="11" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
@@ -89,6 +91,50 @@
                         </TreeView.ContextMenu>
                     </TreeView>
                     <TextBlock Grid.Row="4" Text="Right click for full actions. Delete offers 10s undo." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowSearch}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="SEARCH" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                            <TextBox Text="{Binding SearchQuery}" Watermark="Search workspace" Padding="8,6"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="Regex" IsChecked="{Binding SearchRegex}" FontSize="11"/>
+                                <CheckBox Content="Case" IsChecked="{Binding SearchCase}" FontSize="11"/>
+                                <CheckBox Content="Word" IsChecked="{Binding SearchWord}" FontSize="11"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Search" FontSize="11" Command="{Binding RunSearchCommand}"/>
+                                <Button Content="Stop" FontSize="11" Command="{Binding StopSearchCommand}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding SearchStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
+                            <TextBox Text="{Binding ReplaceText}" Watermark="Replace with" Padding="8,6"/>
+                            <Button Content="Replace selected" FontSize="11" Command="{Binding ReplaceSelectedCommand}"/>
+                            <TextBlock Text="SYMBOLS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding SymbolQuery}" Watermark="@ symbol" Padding="8,6"/>
+                            <Button Content="Find symbol" FontSize="11" Command="{Binding RunSymbolSearchCommand}"/>
+                            <ListBox ItemsSource="{Binding SymbolResults}" Background="Transparent" MaxHeight="200">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                            <TextBlock Text="{Binding File}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <ListBox ItemsSource="{Binding SearchResults}" Background="Transparent" MaxHeight="320">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,4">
+                                            <TextBlock Text="{Binding File}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Preview}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
+                    </Grid>
+                    <TextBlock Grid.Row="2" Text="Explorer: right click. Search: activity SE." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,6,0,0"/>
                 </Grid>
             </Border>
 
@@ -119,7 +165,7 @@
                     </StackPanel>
                 </DockPanel>
                 <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1">
-                    <Grid RowDefinitions="Auto,*">
+                    <Grid RowDefinitions="Auto,Auto,*">
                         <DockPanel Grid.Row="0" Margin="12,10,12,6">
                             <TextBlock Text="EDITOR" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Right" HorizontalAlignment="Right">
@@ -128,7 +174,14 @@
                                 <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}"/>
                             </StackPanel>
                         </DockPanel>
-                        <ae:TextEditor Grid.Row="1" Margin="12,0,12,12"
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="12,0,12,6">
+                            <TextBox Grid.Column="0" Text="{Binding FindText}" Watermark="Find in file" Padding="8,6"/>
+                            <Button Grid.Column="1" Content="Next" FontSize="11" Margin="6,0,0,0" Command="{Binding FindNextCommand}"/>
+                            <CheckBox Grid.Column="2" Content="Rx" IsChecked="{Binding FindRegex}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="3" Content="Aa" IsChecked="{Binding FindCase}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="{Binding FindStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ae:TextEditor Grid.Row="2" Margin="12,0,12,12"
                                        Name="Editor"
                                        ShowLineNumbers="True"
                                        FontFamily="Cascadia Code,Consolas,Monospace"
@@ -143,40 +196,93 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
                         <Button Content="Problems" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
                         <Button Content="Output" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
-                        <Button Content="Terminal" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal"/>
-                        <Button Content="Tasks" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Tasks"/>
+                        <Button Content="Refresh" FontSize="12" Command="{Binding RefreshProblemsCommand}"/>
+                        <Button Content="Copy for chat" FontSize="12" Command="{Binding CopyProblemsForChatCommand}"/>
                     </StackPanel>
-                    <Border Grid.Row="1" Margin="12,0,12,8" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                    <Grid Grid.Row="1" Margin="12,0,12,8">
+                    <Border Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding !ShowProblemsView}">
                         <ScrollViewer>
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
                     </Border>
+                    <ListBox ItemsSource="{Binding Problems}" Background="Transparent" IsVisible="{Binding ShowProblemsView}" MaxHeight="160">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Severity}" FontSize="11" Foreground="{DynamicResource QuantWarning}" Width="50"/>
+                                    <TextBlock Text="{Binding File}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Width="220" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    </Grid>
                 </Grid>
             </Grid>
 
-            <!-- Right assistant -->
-            <Grid Grid.Column="3" RowDefinitions="Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
+            <!-- Right assistant V0.1.0 threads + chips + actions -->
+            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
                 <DockPanel Grid.Row="0" Margin="12,10,12,6">
                     <TextBlock Text="ASSISTANT" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
-                    <TextBlock Text="Ask, Edit, Agent" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Content="New" FontSize="11" Command="{Binding NewThreadCommand}"/>
+                        <Button Content="Export" FontSize="11" Command="{Binding ExportThreadCommand}"/>
+                    </StackPanel>
                 </DockPanel>
-                <ListBox Grid.Row="1" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
+                <StackPanel Grid.Row="1" Margin="12,0,12,6" Spacing="6">
+                    <DockPanel>
+                        <TextBlock Text="{Binding TokenMeter}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ChatMode}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                    </DockPanel>
+                    <ListBox ItemsSource="{Binding Chips}" Background="Transparent" MaxHeight="64">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="6,3" CornerRadius="10" Background="{DynamicResource QuantSurface2}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" Margin="0,0,4,4">
+                                    <TextBlock Text="{Binding Label}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Attach file" FontSize="11" Command="{Binding AddFileChipCommand}"/>
+                        <Button Content="Clear" FontSize="11" Command="{Binding ClearChipsCommand}"/>
+                        <Button Content="Dry run" FontSize="11" Command="{Binding DryRunCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+                <ListBox Grid.Row="2" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border Padding="10,8" Margin="0,4" CornerRadius="8"
                                     Background="{DynamicResource QuantChatAssistant}"
                                     BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="6">
                                     <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
                                     <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Button Content="Copy code" FontSize="11" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}"/>
+                                        <Button Content="Insert" FontSize="11" Command="{Binding $parent[Window].DataContext.InsertLastCodeCommand}"/>
+                                        <Button Content="Apply" FontSize="11" Command="{Binding $parent[Window].DataContext.ApplyLastCodeCommand}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="12,0,12,12">
+                <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="12,0,12,12">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                        <Button Content="Stop" FontSize="11" Command="{Binding StopChatCommand}" IsEnabled="{Binding IsBusy}"/>
+                        <Button Content="Undo apply" FontSize="11" Command="{Binding UndoDiffCommand}"/>
+                        <TextBlock Text="/explain /fix /tests /docs" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
                     <TextBox Grid.Column="0" Text="{Binding InputText}" Watermark="Ask about code, or type / for commands" Padding="10,8"/>
                     <Button Grid.Column="1" Content="Send" Margin="8,0,0,0" Padding="16,8" Command="{Binding SendCommand}" IsEnabled="{Binding !IsBusy}"/>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>

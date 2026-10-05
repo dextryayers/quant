@@ -15,6 +15,14 @@ public partial class MainViewModel : ViewModelBase
     private readonly ThemeService _theme = new();
     private readonly WorkspaceService _workspace = new();
     private readonly ExplorerService _explorer = new();
+    private readonly SearchService _search = new();
+    private readonly SymbolService _symbols = new();
+    private readonly ProblemService _problems = new();
+    private readonly DiffService _diff = new();
+    private readonly PromptService _prompts = new();
+    private ThreadService? _threads;
+    private System.Threading.CancellationTokenSource? _chatCts;
+    private System.Threading.CancellationTokenSource? _searchCts;
     private readonly int _port;
     private FileSystemWatcher? _watcher;
     private System.Threading.Timer? _watchDebounce;
@@ -35,12 +43,20 @@ public partial class MainViewModel : ViewModelBase
         BottomTab = _layout.State.BottomTab;
         OutputLog = "Engine log will appear here.\nIndex log will appear here.\n";
         CurrentTheme = "dark-premium";
+        ShowExplorer = ActiveActivity == "Explorer";
+        ShowSearch = ActiveActivity == "Search" || ActiveActivity == "Symbols";
+        ShowProblemsView = BottomTab == "Problems";
         RefreshExplorer();
         StartWatcher();
     }
 
     public ObservableCollection<FileNode> Roots { get; } = new();
     public ObservableCollection<EditorTab> Tabs { get; } = new();
+    public ObservableCollection<SearchResult> SearchResults { get; } = new();
+    public ObservableCollection<SymbolItem> SymbolResults { get; } = new();
+    public ObservableCollection<ProblemItem> Problems { get; } = new();
+    public ObservableCollection<ContextChip> Chips { get; } = new();
+    public ObservableCollection<ChatThread> ThreadList { get; } = new();
 
     [ObservableProperty]
     public partial string ExplorerFilter { get; set; } = "";
@@ -63,6 +79,59 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ZenMode { get; set; } = false;
 
+    // Phase 4.1 find
+    [ObservableProperty]
+    public partial string FindText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool FindRegex { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool FindCase { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool FindWord { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string FindStatus { get; set; } = "";
+
+    // Phase 4.2 search
+    [ObservableProperty]
+    public partial string SearchQuery { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string ReplaceText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool SearchRegex { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool SearchCase { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool SearchWord { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string SearchStatus { get; set; } = "Type to search workspace";
+
+    // Phase 4.4 symbols
+    [ObservableProperty]
+    public partial string SymbolQuery { get; set; } = "";
+
+    // Phase 4.5 problems
+    [ObservableProperty]
+    public partial bool ProblemsErrorsOnly { get; set; } = false;
+
+    // Phase 5.1 thread UI
+    [ObservableProperty]
+    public partial string TokenMeter { get; set; } = "0 / 8192";
+
+    [ObservableProperty]
+    public partial string ChatMode { get; set; } = "Edit";
+
+    [ObservableProperty]
+    public partial ChatThread? ActiveThread { get; set; }
+
     partial void OnExplorerFilterChanged(string value) => RefreshExplorer();
     partial void OnShowExcludedChanged(bool value) => RefreshExplorer();
 
@@ -71,6 +140,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string ActiveActivity { get; set; } = "Explorer";
+
+    [ObservableProperty]
+    public partial bool ShowExplorer { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowSearch { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowProblemsView { get; set; } = false;
 
     [ObservableProperty]
     public partial bool SideVisible { get; set; } = true;
@@ -107,6 +185,8 @@ public partial class MainViewModel : ViewModelBase
     {
         ActiveActivity = id;
         SideVisible = true;
+        ShowExplorer = id == "Explorer";
+        ShowSearch = id == "Search" || id == "Symbols";
         _layout.State.ActiveActivity = id;
         _layout.State.SideVisible = true;
         _layout.Save();
@@ -141,9 +221,11 @@ public partial class MainViewModel : ViewModelBase
     {
         BottomTab = tab;
         BottomVisible = true;
+        ShowProblemsView = tab == "Problems";
         _layout.State.BottomTab = tab;
         _layout.State.BottomVisible = true;
         _layout.Save();
+        if (tab == "Problems") RefreshProblemsCommand.Execute(null);
     }
 
     [RelayCommand]
@@ -218,32 +300,61 @@ public partial class MainViewModel : ViewModelBase
     private async Task Send()
     {
         if (IsBusy || string.IsNullOrWhiteSpace(InputText)) return;
-        var prompt = InputText.Trim();
+        var raw = InputText.Trim();
         InputText = "";
-        Messages.Add(new ChatMessage { Role = "user", Content = prompt });
+
+        // Phase 5.4 local commands
+        if (PromptService.IsLocalCommand(raw, out var local))
+        {
+            if (local == "/context-clear") { Chips.Clear(); UpdateTokens(); PushToast("Context cleared", "", ""); }
+            else if (local == "/index-refresh") { RefreshExplorer(); PushToast("Index refreshed", "Explorer rebuilt.", ""); }
+            else PushToast(local, "queued", "");
+            return;
+        }
+        var prompt = ExpandSlash(raw);
+        Messages.Add(new ChatMessage { Role = "user", Content = raw });
 
         var assistant = new ChatMessage { Role = "assistant", Content = "" };
         Messages.Add(assistant);
         IsBusy = true;
+        _chatCts?.Cancel();
+        _chatCts = new System.Threading.CancellationTokenSource();
+        UpdateTokens();
 
         try
         {
             var ctx = ActiveTab?.Content ?? EditorText;
+            if (Chips.Count > 0)
+                ctx += "\n\nAttached:\n" + string.Join("\n", System.Linq.Enumerable.Select(Chips, c => $"- {c.Kind} {c.Label}"));
             await _engine.ChatStreamAsync(prompt, ctx, delta =>
             {
                 assistant.Content += delta;
                 // Refresh bound row for streaming render, simple approach for MVP
                 var idx = Messages.IndexOf(assistant);
                 Messages[idx] = new ChatMessage { Role = "assistant", Content = assistant.Content };
-            });
+            }, _chatCts.Token);
             if (string.IsNullOrWhiteSpace(assistant.Content))
             {
-                var once = await _engine.ChatOnceAsync(prompt, ctx);
+                var once = await _engine.ChatOnceAsync(prompt, ctx, _chatCts.Token);
                 var idx = Messages.IndexOf(assistant);
                 Messages[idx] = new ChatMessage { Role = "assistant", Content = once };
             }
             StatusText = "engine connected";
             PushToast("Reply ready", "Assistant stream completed", "");
+            EnsureThreads();
+            if (ActiveThread != null)
+            {
+                ActiveThread.Messages = new System.Collections.Generic.List<ChatMessage>(Messages);
+                ActiveThread.Updated = System.DateTime.Now;
+                if (ActiveThread.Title == "New thread" || ActiveThread.Title.StartsWith("Thread "))
+                    ActiveThread.Title = raw.Length > 40 ? raw[..40] : raw;
+                _threads!.Save();
+            }
+            UpdateTokens();
+        }
+        catch (OperationCanceledException)
+        {
+            PushToast("Stopped", "Streaming cancelled. Partial text kept.", "");
         }
         catch (System.Exception ex)
         {
@@ -703,5 +814,265 @@ public partial class MainViewModel : ViewModelBase
         if (ActiveTab == null || _workspace.ActiveRoot == null) return;
         try { Breadcrumbs = System.IO.Path.GetRelativePath(_workspace.ActiveRoot, ActiveTab.FilePath); }
         catch { Breadcrumbs = ActiveTab.FilePath; }
+    }
+
+    // ---------- Phase 4.1 Find in file ----------
+    [RelayCommand]
+    private void FindNext()
+    {
+        if (ActiveTab == null || string.IsNullOrEmpty(FindText))
+        {
+            FindStatus = "Type text to find";
+            return;
+        }
+        var text = ActiveTab.Content;
+        var cmp = FindCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var idx = text.IndexOf(FindText, cmp);
+        if (idx < 0) FindStatus = "0 matches";
+        else
+        {
+            var line = text[..idx].Count(c => c == '\n') + 1;
+            FindStatus = $"1 match at line {line}";
+            FindJumpOffset = idx;
+            FindJumpLength = FindText.Length;
+            OnPropertyChanged(nameof(FindJumpOffset));
+        }
+    }
+
+    public int FindJumpOffset { get; private set; } = -1;
+    public int FindJumpLength { get; private set; }
+
+    // ---------- Phase 4.2 Global search ----------
+    [RelayCommand]
+    private async Task RunSearch()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        var root = _workspace.ActiveRoot;
+        if (root == null) { SearchStatus = "Open a folder first"; return; }
+        SearchResults.Clear();
+        SearchStatus = $"Searching for '{SearchQuery}'...";
+        try
+        {
+            var hits = await _search.SearchAsync(root, SearchQuery, SearchRegex, SearchCase, SearchWord, 2000, _searchCts.Token, batch =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    foreach (var h in batch.Take(50)) SearchResults.Add(h);
+                    SearchStatus = $"{SearchResults.Count} hits, scanned {_search.LastScanned} files";
+                });
+            });
+            SearchResults.Clear();
+            foreach (var h in hits.Take(500)) SearchResults.Add(h);
+            SearchStatus = $"{hits.Count} hits in {_search.LastScanned} files";
+            OutputLog += $"[search] '{SearchQuery}' {hits.Count} hits\n";
+            EnsureProblemsTab();
+        }
+        catch (OperationCanceledException) { SearchStatus = "Cancelled"; }
+    }
+
+    [RelayCommand]
+    private void StopSearch()
+    {
+        _searchCts?.Cancel();
+        SearchStatus = "Cancelled";
+    }
+
+    // ---------- Phase 4.3 Replace ----------
+    [RelayCommand]
+    private void ReplaceSelected()
+    {
+        if (string.IsNullOrEmpty(SearchQuery)) return;
+        var n = _search.ReplaceInFiles(new System.Collections.Generic.List<SearchResult>(SearchResults), SearchQuery, ReplaceText, onlySelected: true);
+        PushToast("Replace done", $"{n} replacements", "Undo");
+        OutputLog += $"[replace] {n} in selected\n";
+        _ = RunSearchCommand.ExecuteAsync(null);
+    }
+
+    // ---------- Phase 4.4 Symbols ----------
+    [RelayCommand]
+    private void RunSymbolSearch()
+    {
+        SymbolResults.Clear();
+        var root = _workspace.ActiveRoot;
+        if (root == null || string.IsNullOrWhiteSpace(SymbolQuery)) return;
+        foreach (var s in _symbols.Search(root, SymbolQuery, 30)) SymbolResults.Add(s);
+        OutputLog += $"[symbols] '{SymbolQuery}' {SymbolResults.Count} hits\n";
+    }
+
+    [RelayCommand]
+    private void GoToSymbol(SymbolItem? s)
+    {
+        if (s == null) return;
+        OpenFilePath(s.File);
+        PushToast("Symbol", $"{s.Name} at line {s.Line}", "");
+    }
+
+    // ---------- Phase 4.5 Problems ----------
+    private void EnsureProblemsTab()
+    {
+        if (Problems.Count == 0 && SearchResults.Count > 0)
+        {
+            BottomTab = "Problems";
+            BottomVisible = true;
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshProblems()
+    {
+        Problems.Clear();
+        // Parse OutputLog with matchers so failed builds populate Problems.
+        foreach (var p in _problems.Parse(OutputLog, "task"))
+        {
+            if (ProblemsErrorsOnly && p.Severity != "error") continue;
+            Problems.Add(p);
+            if (Problems.Count >= 5000) break;
+        }
+        BottomTab = "Problems";
+        BottomVisible = true;
+        OutputLog += $"[problems] {Problems.Count} items\n";
+    }
+
+    [RelayCommand]
+    private void OpenProblem(ProblemItem? p)
+    {
+        if (p == null || string.IsNullOrEmpty(p.File)) return;
+        OpenFilePath(p.File);
+    }
+
+    [RelayCommand]
+    private void CopyProblemsForChat()
+    {
+        var md = string.Join("\n", System.Linq.Enumerable.Select(Problems, p => $"- {p.Severity} {p.File}:{p.Line} {p.Message}"));
+        Messages.Add(new ChatMessage { Role = "user", Content = "Problems:\n" + md });
+        PushToast("Problems attached", $"{Problems.Count} items", "");
+    }
+
+    // ---------- Phase 5.1 Stop + tokens ----------
+    [RelayCommand]
+    private void StopChat()
+    {
+        _chatCts?.Cancel();
+        IsBusy = false;
+        PushToast("Stopped", "Streaming cancelled. Partial text kept.", "");
+    }
+
+    private void UpdateTokens()
+    {
+        var chars = (ActiveTab?.Content?.Length ?? 0) + System.Linq.Enumerable.Sum(Messages, m => m.Content?.Length ?? 0)
+            + System.Linq.Enumerable.Sum(Chips, c => c.Tokens * 4);
+        TokenMeter = $"{chars / 4} / 8192";
+    }
+
+    // ---------- Phase 5.2 Code actions ----------
+    [RelayCommand]
+    private void CopyLastCode()
+    {
+        var last = System.Linq.Enumerable.LastOrDefault(Messages, m => m.Role == "assistant");
+        if (last == null) return;
+        var blocks = DiffService.ExtractCodeBlocks(last.Content);
+        var code = blocks.Count > 0 ? blocks[^1].Code : last.Content;
+        OutputLog += $"[clipboard] code block {code.Length} chars\n";
+        PushToast("Code ready", $"{code.Length} chars in Output log", "");
+    }
+
+    [RelayCommand]
+    private void InsertLastCode()
+    {
+        var last = System.Linq.Enumerable.LastOrDefault(Messages, m => m.Role == "assistant");
+        if (last == null || ActiveTab == null) return;
+        var blocks = DiffService.ExtractCodeBlocks(last.Content);
+        var code = blocks.Count > 0 ? blocks[^1].Code : last.Content;
+        ActiveTab.Content += "\n" + code;
+        EditorText = ActiveTab.Content;
+        ActiveTab.IsDirty = true;
+        PushToast("Inserted", "Code inserted at end of file.", "");
+    }
+
+    [RelayCommand]
+    private void ApplyLastCode()
+    {
+        var last = System.Linq.Enumerable.LastOrDefault(Messages, m => m.Role == "assistant");
+        if (last == null || ActiveTab == null) return;
+        var blocks = DiffService.ExtractCodeBlocks(last.Content);
+        var code = blocks.Count > 0 ? blocks[^1].Code : last.Content;
+        if (_diff.TryApplyCreate(ActiveTab.FilePath + ".applied", code, out var err))
+            PushToast("Applied", ActiveTab.FilePath + ".applied created. Review then accept.", "Undo");
+        else PushToast("Apply failed", err, "");
+    }
+
+    [RelayCommand]
+    private void UndoDiff()
+    {
+        if (_diff.Undo(out var f)) PushToast("Undone", f, "");
+        else PushToast("Nothing to undo", "", "");
+    }
+
+    // ---------- Phase 5.3 Chips ----------
+    [RelayCommand]
+    private void AddFileChip()
+    {
+        if (ActiveTab == null) return;
+        var tokens = (ActiveTab.Content?.Length ?? 0) / 4;
+        Chips.Add(new ContextChip { Kind = "file", Label = ActiveTab.Title, Path = ActiveTab.FilePath, Tokens = tokens });
+        UpdateTokens();
+    }
+
+    [RelayCommand]
+    private void ClearChips()
+    {
+        Chips.Clear();
+        UpdateTokens();
+    }
+
+    [RelayCommand]
+    private void DryRun()
+    {
+        var prompt = $"chips={Chips.Count} tokens={TokenMeter} mode={ChatMode}";
+        OutputLog += $"[dry-run] {prompt}\nInput: {InputText}\n";
+        PushToast("Dry run", prompt, "");
+    }
+
+    // ---------- Phase 5.4 Slash ----------
+    private string ExpandSlash(string input)
+    {
+        EnsureThreads();
+        var sel = ActiveTab?.Content ?? "";
+        if (sel.Length > 4000) sel = sel[..4000];
+        return _prompts.Expand(input, sel, ActiveTab?.FilePath ?? "");
+    }
+
+    // ---------- Phase 5.5 Threads ----------
+    private void EnsureThreads()
+    {
+        if (_threads != null) return;
+        _threads = new ThreadService(_workspace.ActiveRoot ?? ".");
+        ThreadList.Clear();
+        foreach (var t in _threads.Threads) ThreadList.Add(t);
+        ActiveThread = ThreadList.Count > 0 ? ThreadList[0] : null;
+    }
+
+    [RelayCommand]
+    private void NewThread()
+    {
+        EnsureThreads();
+        _threads!.New($"Thread {ThreadList.Count + 1}");
+        ThreadList.Clear();
+        foreach (var t in _threads.Threads) ThreadList.Add(t);
+        ActiveThread = ThreadList[0];
+        Messages.Clear();
+        foreach (var m in ActiveThread.Messages) Messages.Add(m);
+        PushToast("New thread", ActiveThread.Title, "");
+    }
+
+    [RelayCommand]
+    private void ExportThread()
+    {
+        EnsureThreads();
+        if (ActiveThread == null) return;
+        ActiveThread.Messages = new System.Collections.Generic.List<ChatMessage>(Messages);
+        var path = _threads!.Export(ActiveThread);
+        PushToast("Exported", path, "");
     }
 }

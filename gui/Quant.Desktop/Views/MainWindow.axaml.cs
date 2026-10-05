@@ -28,6 +28,15 @@ public partial class MainWindow : Window
                     {
                         if (e.PropertyName == nameof(MainViewModel.EditorText) && editor.Text != vm.EditorText)
                             editor.Text = vm.EditorText;
+                        if (e.PropertyName == nameof(MainViewModel.FindJumpOffset) && vm.FindJumpOffset >= 0)
+                        {
+                            try
+                            {
+                                editor.CaretOffset = System.Math.Min(vm.FindJumpOffset, editor.Text?.Length ?? 0);
+                                editor.TextArea?.Focus();
+                            }
+                            catch { }
+                        }
                         if (e.PropertyName == nameof(MainViewModel.ActiveTab) && vm.ActiveTab != null)
                         {
                             var lang = vm.ActiveTab.Language switch
