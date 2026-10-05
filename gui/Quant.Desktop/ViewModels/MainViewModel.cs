@@ -264,6 +264,13 @@ public partial class MainViewModel : ViewModelBase
     public partial string CurrentTheme { get; set; } = "dark-premium";
 
     [ObservableProperty]
+    public partial bool IsDark { get; set; } = true;
+
+    public bool IsLight => !IsDark;
+
+    partial void OnIsDarkChanged(bool value) => OnPropertyChanged(nameof(IsLight));
+
+    [ObservableProperty]
     public partial string ActiveActivity { get; set; } = "Explorer";
 
     [ObservableProperty]
@@ -488,7 +495,8 @@ public partial class MainViewModel : ViewModelBase
     {
         _theme.Toggle();
         CurrentTheme = _theme.Current;
-        OutputLog += $"[appearance] {(CurrentTheme == "light-pro" ? "Light" : "Dark")}\n";
+        IsDark = _theme.Current != "light-pro";
+        OutputLog += $"[appearance] {(IsDark ? "Dark" : "Light")}\n";
     }
 
     [RelayCommand]
@@ -2042,7 +2050,16 @@ public partial class MainViewModel : ViewModelBase
     private void RunTask(DevTask? task)
     {
         task ??= System.Linq.Enumerable.FirstOrDefault(Tasks);
-        if (task == null) return;
+        if (task == null)
+        {
+            LoadTasksCommand.Execute(null);
+            task = System.Linq.Enumerable.FirstOrDefault(Tasks);
+        }
+        if (task == null)
+        {
+            PushToast("No tasks", "Add some in Tasks first.", "");
+            return;
+        }
         task.Running = true;
         BottomTab = "Tasks";
         BottomVisible = true;

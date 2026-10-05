@@ -27,9 +27,36 @@
                     <Border Width="1" Height="16" Background="{DynamicResource QuantBorderSubtle}" Margin="6,0" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource QuantTextSecondary}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <Button Content="Theme" Padding="12,6" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
-                    <Button Content="Commands" Padding="12,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="All commands (Ctrl+Shift+P)"/>
+                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                    <Button Width="34" Height="32" Classes="ghost" Command="{Binding NewFileCommand}" ToolTip.Tip="New file">
+                        <Path Data="{x:Static v:Icons.FilePlus}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                    </Button>
+                    <Button Width="34" Height="32" Classes="ghost" Command="{Binding SaveTabCommand}" ToolTip.Tip="Save">
+                        <Path Data="{x:Static v:Icons.Save}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                    </Button>
+                    <Button Width="34" Height="32" Classes="ghost" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search in workspace">
+                        <Path Data="{x:Static v:Icons.Search}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                    </Button>
+                    <Button Width="34" Height="32" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal" ToolTip.Tip="Terminal">
+                        <Path Data="{x:Static v:Icons.Terminal}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                    </Button>
+                    <Button Width="34" Height="32" Classes="ghost" Command="{Binding RunTaskCommand}" ToolTip.Tip="Run task">
+                        <Path Data="{x:Static v:Icons.Play}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                    </Button>
+                    <Border Width="1" Height="16" Background="{DynamicResource QuantBorderSubtle}" Margin="4,0" VerticalAlignment="Center"/>
+                    <Button Padding="10,6" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Path Data="{x:Static v:Icons.Moon}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" IsVisible="{Binding IsDark}"/>
+                            <Path Data="{x:Static v:Icons.Sun}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" IsVisible="{Binding IsLight}"/>
+                            <TextBlock Text="Theme" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Padding="10,6" Command="{Binding OpenPaletteCommand}" ToolTip.Tip="All commands (Ctrl+Shift+P)">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <Path Data="{x:Static v:Icons.Command}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                            <TextBlock Text="Commands" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -41,27 +68,39 @@
                 <StackPanel Spacing="6" HorizontalAlignment="Stretch">
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavExplorer}"/>
-                        <Button Content="EX" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Files"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Files">
+                            <Path Data="{x:Static v:Icons.Folder}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSearch}"/>
-                        <Button Content="SE" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search">
+                            <Path Data="{x:Static v:Icons.Search}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavGit}"/>
-                        <Button Content="GI" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control">
+                            <Path Data="{x:Static v:Icons.GitBranch}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavChat}"/>
-                        <Button Content="CH" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Assistant"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Conversations">
+                            <Path Data="{x:Static v:Icons.MessageSquare}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavModels}"/>
-                        <Button Content="MO" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Assistants"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Assistants">
+                            <Path Data="{x:Static v:Icons.Bot}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSettings}"/>
-                        <Button Content="ST" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
+                        <Button Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings">
+                            <Path Data="{x:Static v:Icons.Settings}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -77,10 +116,18 @@
                     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" IsVisible="{Binding ShowExplorer}">
                     <TextBox Grid.Row="1" Text="{Binding ExplorerFilter}" Watermark="Filter files" Padding="8,6" Margin="0,0,0,4"/>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
-                        <Button Content="Open" FontSize="11" Classes="ghost" Command="{Binding RequestFolderCommand}" ToolTip.Tip="Open a folder"/>
-                        <Button Content="New" FontSize="11" Classes="ghost" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)"/>
-                        <Button Content="Folder" FontSize="11" Classes="ghost" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder"/>
-                        <Button Content="Refresh" FontSize="11" Classes="ghost" Command="{Binding RefreshExplorerCommand}"/>
+                        <Button Width="32" Height="30" Classes="ghost" Command="{Binding RequestFolderCommand}" ToolTip.Tip="Open a folder">
+                            <Path Data="{x:Static v:Icons.FolderOpen}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
+                        <Button Width="32" Height="30" Classes="ghost" Command="{Binding NewFileCommand}" ToolTip.Tip="New file (Ctrl+N)">
+                            <Path Data="{x:Static v:Icons.FilePlus}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
+                        <Button Width="32" Height="30" Classes="ghost" Command="{Binding NewFolderCommand}" ToolTip.Tip="New folder">
+                            <Path Data="{x:Static v:Icons.FolderPlus}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
+                        <Button Width="32" Height="30" Classes="ghost" Command="{Binding RefreshExplorerCommand}" ToolTip.Tip="Refresh">
+                            <Path Data="{x:Static v:Icons.Refresh}" Width="15" Height="15" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                        </Button>
                     </StackPanel>
                     <TreeView Grid.Row="3" Name="ExplorerTree" ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedNode}">
                         <TreeView.ItemTemplate>
@@ -127,8 +174,18 @@
                                 <CheckBox Content="Word" IsChecked="{Binding SearchWord}" FontSize="11"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Search" FontSize="11" Classes="primary" Command="{Binding RunSearchCommand}"/>
-                                <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding StopSearchCommand}"/>
+                                <Button Classes="primary" Command="{Binding RunSearchCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Data="{x:Static v:Icons.Search}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Search" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button FontSize="11" Classes="ghost" Command="{Binding StopSearchCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Data="{x:Static v:Icons.X}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Stop" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             <TextBlock Text="{Binding SearchStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextWrapping="Wrap"/>
                             <TextBox Text="{Binding ReplaceText}" Watermark="Replace with" Padding="8,6"/>
@@ -183,9 +240,21 @@
                                                     <TextBlock Text="{Binding DisplaySize}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                    <Button Content="Get" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.DownloadPresetCommand}" CommandParameter="{Binding}" ToolTip.Tip="Download" IsVisible="{Binding IsPreset}"/>
-                                                    <Button Content="Use" FontSize="11" Command="{Binding $parent[Window].DataContext.LoadModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Switch to this one" IsVisible="{Binding !IsPreset}"/>
-                                                    <Button Content="×" FontSize="11" Padding="8,3" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this device" IsVisible="{Binding CanDelete}"/>
+                                                    <Button Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.DownloadPresetCommand}" CommandParameter="{Binding}" ToolTip.Tip="Download" IsVisible="{Binding IsPreset}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Path Data="{x:Static v:Icons.Download}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Get" FontSize="11" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Command="{Binding $parent[Window].DataContext.LoadModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Switch to this one" IsVisible="{Binding !IsPreset}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Path Data="{x:Static v:Icons.Check}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Use" FontSize="11" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Padding="8,5" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteModelCommand}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this device" IsVisible="{Binding CanDelete}">
+                                                        <Path Data="{x:Static v:Icons.X}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantDanger}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                                                    </Button>
                                                 </StackPanel>
                                             </Grid>
                                         </DataTemplate>
@@ -194,14 +263,19 @@
                                 <Border Padding="10,8" CornerRadius="10" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding Downloading}">
                                     <StackPanel Spacing="6">
                                         <TextBlock Text="{Binding DownloadStatus}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
-                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Height="6" CornerRadius="3"/>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding DownloadProgress}" Height="6" CornerRadius="3" Foreground="{DynamicResource QuantAccent}"/>
                                         <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding CancelDownloadCommand}" HorizontalAlignment="Left"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBox Text="{Binding DownloadRepo}" Watermark="Source, e.g. Qwen/Example-Model" Padding="8,6"/>
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBox Grid.Column="0" Text="{Binding DownloadFile}" Watermark="File name" Padding="8,6" Margin="0,0,6,0"/>
-                                    <Button Grid.Column="1" Content="Get" FontSize="11" Classes="primary" Command="{Binding DownloadCustomCommand}"/>
+                                    <Button Grid.Column="1" Classes="primary" Command="{Binding DownloadCustomCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Path Data="{x:Static v:Icons.Download}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Get" FontSize="11" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </Grid>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -256,8 +330,12 @@
                             <TextBlock Text="{Binding GitBranch}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                             <TextBlock Text="{Binding GitAhead}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Refresh" FontSize="11" Classes="ghost" Command="{Binding RefreshGitCommand}"/>
-                                <Button Content="Stage" FontSize="11" Classes="ghost" Command="{Binding StageGitFileCommand}"/>
+                                <Button Classes="ghost" Command="{Binding StageGitFileCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Stage" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Content="Diff" FontSize="11" Classes="ghost" Command="{Binding ShowGitDiffCommand}"/>
                             </StackPanel>
                             <ListBox ItemsSource="{Binding GitFiles}" SelectedItem="{Binding SelectedGitFile}" Background="Transparent" MaxHeight="200">
@@ -272,8 +350,18 @@
                             </ListBox>
                             <TextBox Text="{Binding CommitMessage}" Watermark="Commit message" Padding="8,6"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Commit" FontSize="11" Classes="primary" Command="{Binding CommitNowCommand}"/>
-                                <Button Content="Gen msg" FontSize="11" Classes="ghost" Command="{Binding GenCommitMsgCommand}"/>
+                                <Button Classes="primary" Command="{Binding CommitNowCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Data="{x:Static v:Icons.Check}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="2" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Commit" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="ghost" Command="{Binding GenCommitMsgCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Data="{x:Static v:Icons.Sparkles}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Gen msg" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             <TextBlock Text="HISTORY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <TextBox Text="{Binding GitLogQuery}" Watermark="Search history" Padding="8,6"/>
@@ -287,7 +375,12 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <Button Content="Open prior version" FontSize="11" Classes="ghost" Command="{Binding ShowPriorVersionCommand}"/>
+                            <Button Classes="ghost" Command="{Binding ShowPriorVersionCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="{x:Static v:Icons.History}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Open prior version" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowSettings}">
@@ -316,7 +409,12 @@
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowChats}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="CONVERSATIONS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
-                            <Button Content="New conversation" FontSize="11" Classes="primary" Command="{Binding NewThreadCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            <Button FontSize="11" Classes="primary" Command="{Binding NewThreadCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="2" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="New conversation" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                             <TextBox Text="{Binding ThreadSearch}" Watermark="Search conversations" Padding="8,6"/>
                             <ListBox ItemsSource="{Binding ThreadView}" SelectedItem="{Binding SelectedThread}" Background="Transparent">
                                 <ListBox.ItemTemplate>
@@ -326,7 +424,9 @@
                                                 <TextBlock Text="{Binding Title}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding Updated, StringFormat='{}{0:dd MMM HH:mm}'}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="×" FontSize="11" Padding="7,2" VerticalAlignment="Center" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteThreadCommand}" CommandParameter="{Binding}" ToolTip.Tip="Delete"/>
+                                            <Button Grid.Column="1" Padding="7,4" VerticalAlignment="Center" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteThreadCommand}" CommandParameter="{Binding}" ToolTip.Tip="Delete">
+                                                <Path Data="{x:Static v:Icons.X}" Width="11" Height="11" Stretch="Uniform" Stroke="{DynamicResource QuantDanger}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                                            </Button>
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -352,7 +452,9 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
                                 <TextBlock Text="*" FontSize="12" Foreground="{DynamicResource QuantWarning}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center"/>
-                                <Button Content="×" FontSize="11" Padding="7,2" Margin="2,0,0,0" VerticalAlignment="Center" Classes="ghost" Command="{Binding $parent[Window].DataContext.CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close"/>
+                                <Button Padding="7,4" Margin="2,0,0,0" VerticalAlignment="Center" Classes="ghost" Command="{Binding $parent[Window].DataContext.CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close">
+                                    <Path Data="{x:Static v:Icons.X}" Width="11" Height="11" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                                </Button>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -360,9 +462,24 @@
                 <DockPanel Grid.Row="1" Margin="12,6,12,2">
                     <TextBlock Text="{Binding Breadcrumbs}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                     <WrapPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Button Content="Preview" FontSize="11" Classes="ghost" Command="{Binding TogglePreviewCommand}" ToolTip.Tip="Toggle Markdown/HTML preview" Margin="0,0,6,0"/>
-                        <Button Content="Complete" FontSize="11" Classes="ghost" Command="{Binding ToggleCompleteCommand}" ToolTip.Tip="Toggle inline completion" Margin="0,0,6,0"/>
-                        <Button Content="Save" FontSize="11" Classes="ghost" Command="{Binding SaveTabCommand}" Margin="0,0,6,0"/>
+                        <Button Classes="ghost" Command="{Binding TogglePreviewCommand}" ToolTip.Tip="Toggle Markdown/HTML preview" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Data="{x:Static v:Icons.Eye}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                <TextBlock Text="Preview" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="ghost" Command="{Binding ToggleCompleteCommand}" ToolTip.Tip="Toggle inline completion" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Data="{x:Static v:Icons.Sparkles}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                <TextBlock Text="Complete" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="ghost" Command="{Binding SaveTabCommand}" ToolTip.Tip="Save" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Data="{x:Static v:Icons.Save}" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                <TextBlock Text="Save" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Content="Save All" FontSize="11" Classes="ghost" Command="{Binding SaveAllTabsCommand}" Margin="0,0,6,0"/>
                         <Button Content="Close" FontSize="11" Classes="ghost" Command="{Binding CloseTabCommand}" Margin="0,0,6,0"/>
                         <Button Content="Zen" FontSize="11" Classes="ghost" Command="{Binding ToggleZenCommand}"/>
@@ -427,9 +544,24 @@
                         </StackPanel>
                         <TextBlock Text="Open a file from the left, or ask the assistant anything. Your code never leaves this device." FontSize="13" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap" TextAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <Button Content="New file" FontSize="11" Classes="primary" Command="{Binding NewFileCommand}"/>
-                            <Button Content="Commands" FontSize="11" Classes="ghost" Command="{Binding OpenPaletteCommand}"/>
-                            <Button Content="Assistant" FontSize="11" Classes="ghost" Command="{Binding ToggleRightCommand}"/>
+                            <Button FontSize="11" Classes="primary" Command="{Binding NewFileCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="2" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="New file" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button FontSize="11" Classes="ghost" Command="{Binding OpenPaletteCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <Path Data="{x:Static v:Icons.Command}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Commands" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button FontSize="11" Classes="ghost" Command="{Binding ToggleRightCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <Path Data="{x:Static v:Icons.MessageSquare}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Assistant" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -444,13 +576,23 @@
                     <Grid RowDefinitions="Auto,*" IsVisible="{Binding !ShowProblemsView}">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
                         <TextBox Text="{Binding TerminalInput}" Watermark="Type a command, Enter to run" Width="320" Padding="8,6"/>
-                        <Button Content="Run" FontSize="11" Command="{Binding SendTerminalCommand}"/>
+                        <Button Command="{Binding SendTerminalCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Data="{x:Static v:Icons.Play}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                <TextBlock Text="Run" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}"/>
                         <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
                     </StackPanel>
                     <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
                         <Button Content="Load" FontSize="11" Classes="ghost" Command="{Binding LoadTasksCommand}" Margin="0,0,6,4"/>
-                        <Button Content="Run" FontSize="11" Classes="primary" Command="{Binding RunTaskCommand}" Margin="0,0,6,4"/>
+                        <Button FontSize="11" Classes="primary" Command="{Binding RunTaskCommand}" Margin="0,0,6,4">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Data="{x:Static v:Icons.Play}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                <TextBlock Text="Run" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Content="Launch" FontSize="11" Classes="ghost" Command="{Binding LoadLaunchesCommand}" Margin="0,0,6,4"/>
                         <Button Content="Start" FontSize="11" Command="{Binding StartLaunchCommand}" Margin="0,0,6,4"/>
                         <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding StopLaunchCommand}" Margin="0,0,6,4"/>
@@ -536,8 +678,18 @@
                                         <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                         <TextBlock Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Button Content="Allow once" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}"/>
-                                            <Button Content="Deny" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.DenyCardCommand}" CommandParameter="{Binding}"/>
+                                            <Button Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Data="{x:Static v:Icons.Check}" Width="13" Height="13" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="2" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Allow once" FontSize="11" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="ghost" Command="{Binding $parent[Window].DataContext.DenyCardCommand}" CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Data="{x:Static v:Icons.X}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Deny" FontSize="11" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -587,7 +739,12 @@
                                     <TextBlock Text="{Binding Author}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
                                     <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Button Content="Copy code" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}"/>
+                                        <Button Classes="ghost" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Path Data="{x:Static v:Icons.Copy}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Copy code" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                         <Button Content="Insert" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.InsertLastCodeCommand}"/>
                                         <Button Content="Apply" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.ApplyLastCodeCommand}"/>
                                     </StackPanel>
@@ -607,10 +764,16 @@
                     </StackPanel>
                     <Border Grid.Row="1" CornerRadius="16" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" Padding="6">
                         <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Button Grid.Column="0" Content="+" FontSize="16" Width="36" Height="36" CornerRadius="18" Classes="ghost" Command="{Binding AttachFileCommand}" ToolTip.Tip="Attach a file" VerticalAlignment="Bottom"/>
+                            <Button Grid.Column="0" Width="36" Height="36" CornerRadius="18" Classes="ghost" Command="{Binding AttachFileCommand}" ToolTip.Tip="Attach a file" VerticalAlignment="Bottom">
+                                <Path Data="{x:Static v:Icons.Paperclip}" Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                            </Button>
                             <TextBox Grid.Column="1" Name="Composer" Text="{Binding InputText}" Watermark="Ask anything…" Padding="10,9" Margin="6,0" MaxHeight="160" AcceptsReturn="True" Background="Transparent" BorderThickness="0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↑" FontSize="16" Width="36" Height="36" CornerRadius="18" Classes="primary" Command="{Binding SendCommand}" IsVisible="{Binding ShowSend}" ToolTip.Tip="Send" VerticalAlignment="Bottom"/>
-                            <Button Grid.Column="2" Content="■" FontSize="12" Width="36" Height="36" CornerRadius="18" Command="{Binding StopChatCommand}" IsVisible="{Binding IsBusy}" ToolTip.Tip="Stop" VerticalAlignment="Bottom"/>
+                            <Button Grid.Column="2" Width="36" Height="36" CornerRadius="18" Classes="primary" Command="{Binding SendCommand}" IsVisible="{Binding ShowSend}" ToolTip.Tip="Send" VerticalAlignment="Bottom">
+                                <Path Data="{x:Static v:Icons.ArrowUp}" Width="16" Height="16" Stretch="Uniform" Stroke="{DynamicResource QuantOnAccent}" StrokeThickness="2" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                            </Button>
+                            <Button Grid.Column="2" Width="36" Height="36" CornerRadius="18" Command="{Binding StopChatCommand}" IsVisible="{Binding IsBusy}" ToolTip.Tip="Stop" VerticalAlignment="Bottom">
+                                <Rectangle Width="11" Height="11" RadiusX="2" RadiusY="2" Fill="{DynamicResource QuantTextSecondary}"/>
+                            </Button>
                         </Grid>
                     </Border>
                 </Grid>
@@ -640,7 +803,9 @@
                                 <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                 <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="X" Margin="8,0,0,0" Padding="8,4" Classes="ghost" Command="{Binding $parent[Window].DataContext.DismissToastCommand}" CommandParameter="{Binding}"/>
+                            <Button Grid.Column="1" Margin="8,0,0,0" Padding="8,6" Classes="ghost" Command="{Binding $parent[Window].DataContext.DismissToastCommand}" CommandParameter="{Binding}">
+                                <Path Data="{x:Static v:Icons.X}" Width="11" Height="11" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"/>
+                            </Button>
                         </Grid>
                     </Border>
                 </DataTemplate>

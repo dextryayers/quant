@@ -75,9 +75,18 @@
             <Setter Property="BorderBrush" Value="{DynamicResource QuantDanger}"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
         </Style>
+        <Style Selector="Button.danger:pointerover Path">
+            <Setter Property="Stroke" Value="#FFFFFF"/>
+        </Style>
         <Style Selector="TextBox">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="10,7"/>
+        </Style>
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource QuantAccent}"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource QuantAccentSoft}"/>
         </Style>
         <Style Selector="TreeViewItem">
             <Setter Property="CornerRadius" Value="8"/>
