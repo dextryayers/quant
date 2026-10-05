@@ -133,8 +133,35 @@
                             </ListBox>
                         </StackPanel>
                     </ScrollViewer>
+                    <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowModels}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="MODELS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
+                            <TextBlock Text="{Binding ModelStatus}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Refresh" FontSize="11" Command="{Binding RefreshModelsCommand}"/>
+                                <Button Content="Unload" FontSize="11" Command="{Binding UnloadModelCommand}"/>
+                            </StackPanel>
+                            <ListBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" Background="Transparent" MaxHeight="320">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,4">
+                                            <TextBlock Text="{Binding Id}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding File}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Load selected" FontSize="11" Command="{Binding LoadSelectedModelCommand}"/>
+                                <Button Content="Refresh index" FontSize="11" Command="{Binding RefreshIndexCommand}"/>
+                            </StackPanel>
+                            <TextBlock Text="PRIVACY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <TextBlock Text="Local only. Index stays in ./index. No upload." FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                            <Button Content="Delete local index" FontSize="11" Command="{Binding ClearIndexCommand}"/>
+                        </StackPanel>
+                    </ScrollViewer>
                     </Grid>
-                    <TextBlock Grid.Row="2" Text="Explorer: right click. Search: activity SE." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,6,0,0"/>
+                    <TextBlock Grid.Row="2" Text="Explorer: right click. Search: SE. Models: MO." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Margin="0,6,0,0"/>
                 </Grid>
             </Border>
 

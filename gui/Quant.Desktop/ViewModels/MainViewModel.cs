@@ -35,6 +35,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _engine = new QuantEngineClient(baseUrl);
         _port = port;
+        RememberBase(baseUrl);
         StatusText = $"engine :{port} not checked";
         ActiveActivity = _layout.State.ActiveActivity;
         SideVisible = _layout.State.SideVisible;
@@ -45,6 +46,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentTheme = "dark-premium";
         ShowExplorer = ActiveActivity == "Explorer";
         ShowSearch = ActiveActivity == "Search" || ActiveActivity == "Symbols";
+        ShowModels = ActiveActivity == "Models";
         ShowProblemsView = BottomTab == "Problems";
         RefreshExplorer();
         StartWatcher();
@@ -57,6 +59,16 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ProblemItem> Problems { get; } = new();
     public ObservableCollection<ContextChip> Chips { get; } = new();
     public ObservableCollection<ChatThread> ThreadList { get; } = new();
+    public ObservableCollection<EngineModel> Models { get; } = new();
+
+    [ObservableProperty]
+    public partial string ActiveModelId { get; set; } = "";
+
+    [ObservableProperty]
+    public partial EngineModel? SelectedModel { get; set; }
+
+    [ObservableProperty]
+    public partial string ModelStatus { get; set; } = "No model loaded. Presets work offline after download.";
 
     [ObservableProperty]
     public partial string ExplorerFilter { get; set; } = "";
@@ -148,6 +160,9 @@ public partial class MainViewModel : ViewModelBase
     public partial bool ShowSearch { get; set; } = false;
 
     [ObservableProperty]
+    public partial bool ShowModels { get; set; } = false;
+
+    [ObservableProperty]
     public partial bool ShowProblemsView { get; set; } = false;
 
     [ObservableProperty]
@@ -187,9 +202,11 @@ public partial class MainViewModel : ViewModelBase
         SideVisible = true;
         ShowExplorer = id == "Explorer";
         ShowSearch = id == "Search" || id == "Symbols";
+        ShowModels = id == "Models";
         _layout.State.ActiveActivity = id;
         _layout.State.SideVisible = true;
         _layout.Save();
+        if (ShowModels) _ = RefreshModelsAsync();
     }
 
     [RelayCommand]
@@ -326,6 +343,9 @@ public partial class MainViewModel : ViewModelBase
             var ctx = ActiveTab?.Content ?? EditorText;
             if (Chips.Count > 0)
                 ctx += "\n\nAttached:\n" + string.Join("\n", System.Linq.Enumerable.Select(Chips, c => $"- {c.Kind} {c.Label}"));
+            // Phase 7.3 auto RAG citations, best effort under 2s
+            var cites = await RagCitationsAsync(raw);
+            if (!string.IsNullOrEmpty(cites)) ctx += cites;
             await _engine.ChatStreamAsync(prompt, ctx, delta =>
             {
                 assistant.Content += delta;
@@ -1074,5 +1094,116 @@ public partial class MainViewModel : ViewModelBase
         ActiveThread.Messages = new System.Collections.Generic.List<ChatMessage>(Messages);
         var path = _threads!.Export(ActiveThread);
         PushToast("Exported", path, "");
+    }
+
+    // ---------- Phase 6/7 Models + RAG + privacy ----------
+    private string _baseUrl = "http://127.0.0.1:3737";
+
+    private void RememberBase(string baseUrl) => _baseUrl = baseUrl;
+
+    [RelayCommand]
+    private async Task RefreshModels()
+    {
+        await RefreshModelsAsync();
+    }
+
+    private async Task RefreshModelsAsync()
+    {
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            var list = await svc.ListAsync();
+            Models.Clear();
+            foreach (var m in list) Models.Add(m);
+            var loaded = System.Linq.Enumerable.FirstOrDefault(Models, m => m.Loaded);
+            ActiveModelId = loaded?.Id ?? "";
+            ModelStatus = loaded != null
+                ? $"Loaded {loaded.Id} RAM ~{(loaded.RamMb ?? 0):F0} MB mmap"
+                : $"{Models.Count} models found. Local only, no upload.";
+            OutputLog += $"[models] {Models.Count} entries, active={ActiveModelId}\n";
+        }
+        catch (System.Exception ex) { ModelStatus = ex.Message; }
+    }
+
+    [RelayCommand]
+    private async Task LoadSelectedModel()
+    {
+        var id = SelectedModel?.Id ?? ActiveModelId;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            var first = System.Linq.Enumerable.FirstOrDefault(Models);
+            if (first == null) { PushToast("No model", "Refresh models first.", ""); return; }
+            id = first.Id;
+        }
+        await LoadModelAsync(id);
+    }
+
+    private async Task LoadModelAsync(string id)
+    {
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            var body = await svc.LoadAsync(id);
+            ModelStatus = body.Length > 200 ? body[..200] : body;
+            await RefreshModelsAsync();
+            PushToast("Model", ModelStatus, "");
+        }
+        catch (System.Exception ex) { PushToast("Load failed", ex.Message, ""); }
+    }
+
+    [RelayCommand]
+    private async Task UnloadModel()
+    {
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            await svc.UnloadAsync();
+            await RefreshModelsAsync();
+            PushToast("Unloaded", "RAM released.", "");
+        }
+        catch (System.Exception ex) { PushToast("Unload failed", ex.Message, ""); }
+    }
+
+    [RelayCommand]
+    private async Task RefreshIndex()
+    {
+        var root = _workspace.ActiveRoot;
+        if (root == null) return;
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { BaseAddress = new System.Uri(_baseUrl), Timeout = System.TimeSpan.FromMinutes(5) };
+            var json = System.Text.Json.JsonSerializer.Serialize(new { roots = new[] { root }, full = false });
+            var res = await http.PostAsync("/v1/index/refresh", new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+            var body = await res.Content.ReadAsStringAsync();
+            OutputLog += $"[index] {body}\n";
+            PushToast("Index refreshed", body.Length > 120 ? body[..120] : body, "");
+        }
+        catch (System.Exception ex) { PushToast("Index failed", ex.Message, ""); }
+    }
+
+    [RelayCommand]
+    private void ClearIndex()
+    {
+        try
+        {
+            if (System.IO.Directory.Exists("./index"))
+                System.IO.Directory.Delete("./index", true);
+            OutputLog += "[privacy] local index deleted\n";
+            PushToast("Privacy", "Local index deleted. No data leaves device.", "");
+        }
+        catch (System.Exception ex) { PushToast("Clear failed", ex.Message, ""); }
+    }
+
+    private async Task<string> RagCitationsAsync(string query)
+    {
+        try
+        {
+            using var svc = new ModelService(_baseUrl);
+            var hits = await svc.CodeSearchAsync(_baseUrl, query, 3);
+            if (hits.Count == 0) return "";
+            OutputLog += $"[rag] {hits.Count} hits\n";
+            return "\n\nCitations:\n" + string.Join("\n", System.Linq.Enumerable.Select(hits, h => $"- {h.Path}:{h.Start} score {h.Score:F2} {h.Why}"));
+        }
+        catch { return ""; }
     }
 }
