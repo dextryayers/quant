@@ -1992,21 +1992,48 @@ public partial class MainViewModel : ViewModelBase
         if (Approvals.Count == 0) AgentStatus = "done";
     }
 
-    // ---------- Phase 9.3 Terminal ----------
+    // ---------- Phase 9.3 Terminal: full interactive shells ----------
+    public bool IsWindows => TerminalSession.IsWindows;
+
     [RelayCommand]
-    private void NewTerminal()
+    private void NewTerminal(string? shell)
     {
-        var term = new TerminalSession(_workspace.ActiveRoot ?? ".");
+        var term = new TerminalSession(_workspace.ActiveRoot ?? ".", shell);
         term.Changed += () => OnPropertyChanged(nameof(TerminalOutput));
         Terminals.Add(term);
         ActiveTerminal = term;
         BottomTab = "Terminal";
         BottomVisible = true;
         ShowProblemsView = false;
-        OutputLog += $"[terminal] new {term.Id}\n";
+        ShowTerminalView = true;
+        ShowTasksView = false;
+        ShowOutputView = false;
+        OutputLog += $"[terminal] new {term.Label}\n";
     }
 
-    public string TerminalOutput => ActiveTerminal?.Output.ToString() ?? "No terminal. Press New.";
+    [RelayCommand]
+    private void ActivateTerminal(TerminalSession? term)
+    {
+        if (term == null) return;
+        ActiveTerminal = term;
+        OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    [RelayCommand]
+    private void ClearTerminal()
+    {
+        ActiveTerminal?.Clear();
+        OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    [RelayCommand]
+    private void RestartTerminal()
+    {
+        ActiveTerminal?.Restart();
+        OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    public string TerminalOutput => ActiveTerminal?.Output.ToString() ?? "No terminal yet. Pick a shell above.";
 
     [RelayCommand]
     private void SendTerminal()
@@ -2014,7 +2041,7 @@ public partial class MainViewModel : ViewModelBase
         if (ActiveTerminal == null || string.IsNullOrWhiteSpace(TerminalInput)) return;
         var cmd = TerminalInput.Trim();
         TerminalInput = "";
-        ActiveTerminal.Send(cmd);
+        ActiveTerminal.SendLine(cmd);
         OnPropertyChanged(nameof(TerminalOutput));
     }
 

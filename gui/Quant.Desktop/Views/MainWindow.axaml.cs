@@ -15,6 +15,20 @@ public partial class MainWindow : Window
         var editor = this.FindControl<AvaloniaEdit.TextEditor>("Editor");
         var tree = this.FindControl<TreeView>("ExplorerTree");
         var composer = this.FindControl<TextBox>("Composer");
+        var terminalInput = this.FindControl<TextBox>("TerminalInput");
+        var terminalScroll = this.FindControl<ScrollViewer>("TerminalScroll");
+        if (terminalInput != null)
+        {
+            terminalInput.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (s, e) =>
+            {
+                if (DataContext is not MainViewModel vm2) return;
+                if (e.Key == Avalonia.Input.Key.Enter && !e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Shift))
+                {
+                    vm2.SendTerminalCommand.Execute(null);
+                    e.Handled = true;
+                }
+            }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        }
         if (composer != null)
         {
             composer.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (s, e) =>
@@ -63,6 +77,10 @@ public partial class MainWindow : Window
                     editor.TextChanged += (_, _) => vm.EditorText = editor.Text ?? "";
                     vm.PropertyChanged += async (_, e) =>
                     {
+                        if (e.PropertyName == nameof(MainViewModel.TerminalOutput) && terminalScroll != null)
+                        {
+                            try { terminalScroll.ScrollToEnd(); } catch { }
+                        }
                         if (e.PropertyName == nameof(MainViewModel.EditorText) && editor.Text != vm.EditorText)
                             editor.Text = vm.EditorText;
                         if (e.PropertyName == nameof(MainViewModel.FindJumpOffset) && vm.FindJumpOffset >= 0)

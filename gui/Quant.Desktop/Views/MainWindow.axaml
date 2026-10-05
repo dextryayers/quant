@@ -574,16 +574,46 @@
                     </StackPanel>
                     <Grid Grid.Row="1" Margin="12,0,12,8">
                     <Grid RowDefinitions="Auto,*" IsVisible="{Binding !ShowProblemsView}">
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
-                        <TextBox Text="{Binding TerminalInput}" Watermark="Type a command, Enter to run" Width="320" Padding="8,6"/>
-                        <Button Command="{Binding SendTerminalCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Path Data="{x:Static v:Icons.Play}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
-                                <TextBlock Text="Run" FontSize="11" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}"/>
-                        <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
+                    <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ItemsControl ItemsSource="{Binding Terminals}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding Label}" FontSize="11" Classes="ghost" Margin="0,0,4,4" Command="{Binding $parent[Window].DataContext.ActivateTerminalCommand}" CommandParameter="{Binding}" ToolTip.Tip="Switch session"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" ToolTip.Tip="New shell here">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="PowerShell" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" CommandParameter="cmd" ToolTip.Tip="New raw CMD here" IsVisible="{Binding IsWindows}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="CMD" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Content="Restart" FontSize="11" Classes="ghost" Command="{Binding RestartTerminalCommand}" ToolTip.Tip="Restart this shell"/>
+                            <Button Content="Clear" FontSize="11" Classes="ghost" Command="{Binding ClearTerminalCommand}"/>
+                            <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}"/>
+                            <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0" Name="TerminalInput" Text="{Binding TerminalInput}" Watermark="Type here, Enter runs it in the live shell" Padding="8,6" Margin="0,0,6,0"/>
+                            <Button Grid.Column="1" Command="{Binding SendTerminalCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="{x:Static v:Icons.Play}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Run" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                     </StackPanel>
                     <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
                         <Button Content="Load" FontSize="11" Classes="ghost" Command="{Binding LoadTasksCommand}" Margin="0,0,6,4"/>
@@ -605,7 +635,7 @@
                         <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
-                        <ScrollViewer IsVisible="{Binding ShowTerminalView}" MaxHeight="140">
+                        <ScrollViewer Name="TerminalScroll" IsVisible="{Binding ShowTerminalView}" MaxHeight="140">
                             <TextBlock Text="{Binding TerminalOutput}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
                         <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
