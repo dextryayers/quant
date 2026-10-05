@@ -48,6 +48,9 @@ public partial class MainViewModel : ViewModelBase
         ShowSearch = ActiveActivity == "Search" || ActiveActivity == "Symbols";
         ShowModels = ActiveActivity == "Models";
         ShowProblemsView = BottomTab == "Problems";
+        ShowTerminalView = BottomTab == "Terminal";
+        ShowTasksView = BottomTab == "Tasks";
+        ShowOutputView = BottomTab == "Output";
         RefreshExplorer();
         StartWatcher();
     }
@@ -60,6 +63,9 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ContextChip> Chips { get; } = new();
     public ObservableCollection<ChatThread> ThreadList { get; } = new();
     public ObservableCollection<EngineModel> Models { get; } = new();
+    public ObservableCollection<ApprovalCard> Approvals { get; } = new();
+    public ObservableCollection<DevTask> Tasks { get; } = new();
+    public ObservableCollection<TerminalSession> Terminals { get; } = new();
 
     [ObservableProperty]
     public partial string ActiveModelId { get; set; } = "";
@@ -142,6 +148,15 @@ public partial class MainViewModel : ViewModelBase
     public partial string ChatMode { get; set; } = "Edit";
 
     [ObservableProperty]
+    public partial string TerminalInput { get; set; } = "";
+
+    [ObservableProperty]
+    public partial TerminalSession? ActiveTerminal { get; set; }
+
+    [ObservableProperty]
+    public partial string AgentStatus { get; set; } = "idle";
+
+    [ObservableProperty]
     public partial ChatThread? ActiveThread { get; set; }
 
     partial void OnExplorerFilterChanged(string value) => RefreshExplorer();
@@ -164,6 +179,15 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial bool ShowProblemsView { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowTerminalView { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowTasksView { get; set; } = false;
+
+    [ObservableProperty]
+    public partial bool ShowOutputView { get; set; } = true;
 
     [ObservableProperty]
     public partial bool SideVisible { get; set; } = true;
@@ -239,10 +263,15 @@ public partial class MainViewModel : ViewModelBase
         BottomTab = tab;
         BottomVisible = true;
         ShowProblemsView = tab == "Problems";
+        ShowTerminalView = tab == "Terminal";
+        ShowTasksView = tab == "Tasks";
+        ShowOutputView = tab == "Output";
         _layout.State.BottomTab = tab;
         _layout.State.BottomVisible = true;
         _layout.Save();
         if (tab == "Problems") RefreshProblemsCommand.Execute(null);
+        if (tab == "Tasks" && Tasks.Count == 0) LoadTasksCommand.Execute(null);
+        if (tab == "Terminal" && ActiveTerminal == null) NewTerminalCommand.Execute(null);
     }
 
     [RelayCommand]
@@ -1205,5 +1234,164 @@ public partial class MainViewModel : ViewModelBase
             return "\n\nCitations:\n" + string.Join("\n", System.Linq.Enumerable.Select(hits, h => $"- {h.Path}:{h.Start} score {h.Score:F2} {h.Why}"));
         }
         catch { return ""; }
+    }
+
+    // ---------- Phase 8.2 Approvals ----------
+    [RelayCommand]
+    private void SetMode(string mode)
+    {
+        ChatMode = mode;
+        OutputLog += $"[agent] mode={mode}\n";
+    }
+
+    [RelayCommand]
+    private async Task RunAgent()
+    {
+        if (IsBusy || string.IsNullOrWhiteSpace(InputText)) return;
+        var msg = InputText.Trim();
+        InputText = "";
+        AgentStatus = "planning";
+        Messages.Add(new ChatMessage { Role = "user", Content = $"[{ChatMode}] {msg}" });
+        OutputLog += $"[agent] run mode={ChatMode} msg={msg}\n";
+        try
+        {
+            using var svc = new AgentService(_baseUrl);
+            var root = _workspace.ActiveRoot ?? ".";
+            await svc.RunAsync(ChatMode, msg, root, data =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    OutputLog += $"[agent] {data}\n";
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(data);
+                        var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+                        if (type == "awaiting_approval")
+                        {
+                            var tool = doc.RootElement.TryGetProperty("tool", out var tl) ? tl.GetString() ?? "" : "";
+                            var reason = doc.RootElement.TryGetProperty("reason", out var r) ? r.GetString() ?? "" : "";
+                            Approvals.Add(new ApprovalCard { Id = System.Guid.NewGuid().ToString("N")[..8], Tool = tool, Args = data.Length > 200 ? data[..200] : data, Reason = reason });
+                            AgentStatus = "awaiting approval";
+                        }
+                    }
+                    catch { }
+                });
+            });
+            AgentStatus = Approvals.Count > 0 ? "awaiting approval" : "done";
+            if (ChatMode == "Ask") AgentStatus = "done";
+        }
+        catch (System.Exception ex)
+        {
+            AgentStatus = "error";
+            PushToast("Agent failed", ex.Message, "");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ApproveCard(ApprovalCard? card)
+    {
+        card ??= System.Linq.Enumerable.LastOrDefault(Approvals);
+        if (card == null) return;
+        try
+        {
+            using var svc = new AgentService(_baseUrl);
+            var token = await svc.GrantAsync("workspace", card.Tool);
+            card.Status = "approved";
+            OutputLog += $"[approval] {card.Tool} granted {token}\n";
+            PushToast("Approved once", $"{card.Tool}: {card.Reason}", "");
+            Approvals.Remove(card);
+            if (Approvals.Count == 0) AgentStatus = "done";
+        }
+        catch (System.Exception ex) { PushToast("Approve failed", ex.Message, ""); }
+    }
+
+    [RelayCommand]
+    private void DenyCard(ApprovalCard? card)
+    {
+        card ??= System.Linq.Enumerable.LastOrDefault(Approvals);
+        if (card == null) return;
+        card.Status = "denied";
+        OutputLog += $"[approval] {card.Tool} denied\n";
+        Approvals.Remove(card);
+        if (Approvals.Count == 0) AgentStatus = "done";
+    }
+
+    // ---------- Phase 9.3 Terminal ----------
+    [RelayCommand]
+    private void NewTerminal()
+    {
+        var term = new TerminalSession(_workspace.ActiveRoot ?? ".");
+        term.Changed += () => OnPropertyChanged(nameof(TerminalOutput));
+        Terminals.Add(term);
+        ActiveTerminal = term;
+        BottomTab = "Terminal";
+        BottomVisible = true;
+        ShowProblemsView = false;
+        OutputLog += $"[terminal] new {term.Id}\n";
+    }
+
+    public string TerminalOutput => ActiveTerminal?.Output.ToString() ?? "No terminal. Press New.";
+
+    [RelayCommand]
+    private void SendTerminal()
+    {
+        if (ActiveTerminal == null || string.IsNullOrWhiteSpace(TerminalInput)) return;
+        var cmd = TerminalInput.Trim();
+        TerminalInput = "";
+        ActiveTerminal.Send(cmd);
+        OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    [RelayCommand]
+    private void KillTerminal()
+    {
+        ActiveTerminal?.Kill();
+        OnPropertyChanged(nameof(TerminalOutput));
+    }
+
+    [RelayCommand]
+    private void AttachTerminalOutput()
+    {
+        if (ActiveTerminal == null) return;
+        var text = ActiveTerminal.Output.ToString();
+        if (text.Length > 4000) text = text[^4000..];
+        Chips.Add(new ContextChip { Kind = "terminal", Label = $"terminal {ActiveTerminal.Id}", Path = "", Tokens = text.Length / 4 });
+        Messages.Add(new ChatMessage { Role = "user", Content = "Terminal output:\n" + text });
+        UpdateTokens();
+    }
+
+    // ---------- Phase 9.4 Tasks ----------
+    [RelayCommand]
+    private void LoadTasks()
+    {
+        Tasks.Clear();
+        var svc = new TaskService();
+        foreach (var t in svc.Load(_workspace.ActiveRoot ?? ".")) Tasks.Add(t);
+        OutputLog += $"[tasks] {Tasks.Count} loaded\n";
+    }
+
+    [RelayCommand]
+    private void RunTask(DevTask? task)
+    {
+        task ??= System.Linq.Enumerable.FirstOrDefault(Tasks);
+        if (task == null) return;
+        task.Running = true;
+        BottomTab = "Tasks";
+        BottomVisible = true;
+        OutputLog += $"[task] run {task.Label}: {task.Command}\n";
+        var term = new TerminalSession(task.Cwd);
+        term.Changed += () =>
+        {
+            OutputLog = term.Output.ToString();
+            // Live problem parsing so failed builds populate Problems.
+            Problems.Clear();
+            foreach (var p in _problems.Parse(term.Output.ToString(), "task"))
+                Problems.Add(p);
+        };
+        Terminals.Add(term);
+        ActiveTerminal = term;
+        term.Send(task.Command);
+        task.Running = false;
+        OnPropertyChanged(nameof(TerminalOutput));
     }
 }

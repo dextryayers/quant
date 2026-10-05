@@ -223,16 +223,49 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
                         <Button Content="Problems" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
                         <Button Content="Output" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
-                        <Button Content="Refresh" FontSize="12" Command="{Binding RefreshProblemsCommand}"/>
-                        <Button Content="Copy for chat" FontSize="12" Command="{Binding CopyProblemsForChatCommand}"/>
+                        <Button Content="Terminal" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal"/>
+                        <Button Content="Tasks" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Tasks"/>
                     </StackPanel>
                     <Grid Grid.Row="1" Margin="12,0,12,8">
-                    <Border Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding !ShowProblemsView}">
-                        <ScrollViewer>
+                    <Grid RowDefinitions="Auto,*" IsVisible="{Binding !ShowProblemsView}">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
+                        <TextBox Text="{Binding TerminalInput}" Watermark="Type shell command, Enter to run" Width="320" Padding="8,6"/>
+                        <Button Content="Run" FontSize="11" Command="{Binding SendTerminalCommand}"/>
+                        <Button Content="Kill" FontSize="11" Command="{Binding KillTerminalCommand}"/>
+                        <Button Content="Attach" FontSize="11" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
+                        <Button Content="Load" FontSize="11" Command="{Binding LoadTasksCommand}"/>
+                        <TextBlock Text="tasks.json + one key build" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Border Grid.Row="1" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                        <Grid>
+                        <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
+                        <ScrollViewer IsVisible="{Binding ShowTerminalView}" MaxHeight="140">
+                            <TextBlock Text="{Binding TerminalOutput}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                        <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="140">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" Width="200"/>
+                                        <TextBlock Text="{Binding Command}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        </Grid>
                     </Border>
-                    <ListBox ItemsSource="{Binding Problems}" Background="Transparent" IsVisible="{Binding ShowProblemsView}" MaxHeight="160">
+                    </Grid>
+                    <Grid RowDefinitions="Auto,*" IsVisible="{Binding ShowProblemsView}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                            <TextBlock Text="{Binding Problems.Count}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                            <TextBlock Text="problems" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                            <Button Content="Copy for chat" FontSize="11" Command="{Binding CopyProblemsForChatCommand}"/>
+                        </StackPanel>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Problems}" Background="Transparent" MaxHeight="140">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -244,11 +277,12 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     </Grid>
+                    </Grid>
                 </Grid>
             </Grid>
 
-            <!-- Right assistant V0.1.0 threads + chips + actions -->
-            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
+            <!-- Right assistant V0.1.0 threads + chips + approvals + actions -->
+            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
                 <DockPanel Grid.Row="0" Margin="12,10,12,6">
                     <TextBlock Text="ASSISTANT" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
@@ -257,6 +291,30 @@
                     </StackPanel>
                 </DockPanel>
                 <StackPanel Grid.Row="1" Margin="12,0,12,6" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button Content="Ask" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Ask"/>
+                        <Button Content="Edit" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Edit"/>
+                        <Button Content="Agent" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Agent"/>
+                        <TextBlock Text="{Binding AgentStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding Approvals}" Background="Transparent" MaxHeight="140">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,6" Margin="0,4" CornerRadius="8" Background="{DynamicResource QuantSurface2}" BorderBrush="{DynamicResource QuantWarning}" BorderThickness="1">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Tool}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
+                                        <TextBlock Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="Allow once" FontSize="11" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}"/>
+                                            <Button Content="Deny" FontSize="11" Command="{Binding $parent[Window].DataContext.DenyCardCommand}" CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Row="2" Margin="12,0,12,6" Spacing="6">
                     <DockPanel>
                         <TextBlock Text="{Binding TokenMeter}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding ChatMode}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Right" HorizontalAlignment="Right"/>
@@ -281,7 +339,7 @@
                         <Button Content="Dry run" FontSize="11" Command="{Binding DryRunCommand}"/>
                     </StackPanel>
                 </StackPanel>
-                <ListBox Grid.Row="2" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
+                <ListBox Grid.Row="3" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Border Padding="10,8" Margin="0,4" CornerRadius="8"
@@ -300,8 +358,10 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="12,0,12,12">
+                <Grid Grid.Row="4" RowDefinitions="Auto,Auto" Margin="12,0,12,12">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                        <Button Content="Send" FontSize="11" Command="{Binding SendCommand}" IsEnabled="{Binding !IsBusy}"/>
+                        <Button Content="Agent" FontSize="11" Command="{Binding RunAgentCommand}"/>
                         <Button Content="Stop" FontSize="11" Command="{Binding StopChatCommand}" IsEnabled="{Binding IsBusy}"/>
                         <Button Content="Undo apply" FontSize="11" Command="{Binding UndoDiffCommand}"/>
                         <TextBlock Text="/explain /fix /tests /docs" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>

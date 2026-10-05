@@ -1,0 +1,5 @@
+{"args":{"path":"D:/koding/quant/plan.md"},"ok":true,"preview":"# Quant IDE - Master Plan v2 Deep Spec","t":1791162699,"tool":"read"}
+{"args":{"query":"Phase"},"ok":true,"preview":"See `plan.md` Phase 0 to Phase 14 for build order.","t":1791162700,"tool":"grep"}
+{"args":{"command":"echo hello quant"},"ok":false,"preview":"needs approval","t":1791162700,"tool":"exec"}
+{"args":{"scope":"workspace"},"ok":true,"preview":"cargo test","t":1791162869,"tool":"approve"}
+{"args":{"command":"cargo --version"},"ok":true,"preview":"cargo 1.98.0 (797e8a9bc 2026-08-05)","t":1791162869,"tool":"exec"}

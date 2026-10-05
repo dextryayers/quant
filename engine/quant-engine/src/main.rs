@@ -1,3 +1,5 @@
+mod agent;
+mod complete;
 mod context;
 mod download;
 mod embed;
@@ -5,6 +7,7 @@ mod index;
 mod model;
 mod retrieve;
 mod sampler;
+mod tools;
 
 use axum::{
     Json, Router,
@@ -34,6 +37,8 @@ struct AppState {
     symbols: Arc<RwLock<Vec<index::Symbol>>>,
     metrics: Arc<RwLock<Metrics>>,
     cancels: Arc<RwLock<HashMap<String, bool>>>,
+    approvals: Arc<RwLock<HashMap<String, tools::Approval>>>,
+    completer: complete::Completer,
 }
 
 #[derive(Debug, Default, Clone, Serialize)]
@@ -446,6 +451,311 @@ async fn chat_cancel(
     Json(serde_json::json!({"cancelled": n}))
 }
 
+fn audit(tool: &str, args: &serde_json::Value, ok: bool, preview: &str) {
+    try_audit(tool, args, ok, preview);
+}
+
+fn try_audit(tool: &str, args: &serde_json::Value, ok: bool, preview: &str) {
+    let _ = std::fs::create_dir_all("./logs");
+    let line = serde_json::json!({
+        "t": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
+        "tool": tool,
+        "args": scrub(args),
+        "ok": ok,
+        "preview": preview.chars().take(300).collect::<String>(),
+    });
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("./logs/agent.jsonl") {
+        let _ = writeln!(f, "{line}");
+    }
+}
+
+fn scrub(args: &serde_json::Value) -> serde_json::Value {
+    let mut v = args.clone();
+    for key in ["token", "approval_token", "key", "secret"] {
+        if let Some(o) = v.as_object_mut() {
+            if o.contains_key(key) {
+                o.insert(key.into(), serde_json::json!("***"));
+            }
+        }
+    }
+    v
+}
+
+fn roots_for(req_root: Option<&str>) -> Vec<String> {
+    if let Some(r) = req_root {
+        if !r.is_empty() {
+            return vec![r.to_string()];
+        }
+    }
+    vec![std::env::current_dir().map(|p| p.to_string_lossy().into()).unwrap_or_else(|_| ".".into())]
+}
+
+// ---------- Tools ----------
+#[derive(Debug, Deserialize)]
+struct ReadReq {
+    path: String,
+    #[serde(default = "d_offset")]
+    offset: usize,
+    #[serde(default = "d_limit")]
+    limit: usize,
+    root: Option<String>,
+}
+fn d_offset() -> usize {
+    1
+}
+fn d_limit() -> usize {
+    200
+}
+
+async fn tool_read(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<ReadReq>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let roots = roots_for(req.root.as_deref());
+    let path = match tools::jail(&req.path, &roots, &s.models_dir.to_string_lossy()) {
+        Ok(p) => p,
+        Err(e) => {
+            audit("read", &serde_json::json!({"path": req.path}), false, &e);
+            return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error":{"code":"PATH_ESCAPE","message":e}})));
+        }
+    };
+    // resolve relative against root for fs access
+    let fs_path = if path.is_absolute() { path } else { PathBuf::from(&roots[0]).join(path) };
+    match tools::read_file(&fs_path, req.offset, req.limit) {
+        Ok(o) => {
+            audit("read", &serde_json::json!({"path": req.path}), true, &o.lines.first().cloned().unwrap_or_default());
+            (StatusCode::OK, Json(serde_json::json!(o)))
+        }
+        Err(e) => {
+            audit("read", &serde_json::json!({"path": req.path}), false, &e);
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({"error":{"code":"READ","message":e}})))
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GlobReq {
+    pattern: String,
+    root: Option<String>,
+}
+
+async fn tool_glob(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<GlobReq>,
+) -> Json<serde_json::Value> {
+    let _ = s;
+    let roots = roots_for(req.root.as_deref());
+    let hits = tools::glob_files(&roots[0], &req.pattern, 200);
+    audit("glob", &serde_json::json!({"pattern": req.pattern}), true, &hits.first().cloned().unwrap_or_default());
+    Json(serde_json::json!({"data": hits}))
+}
+
+#[derive(Debug, Deserialize)]
+struct GrepReq {
+    query: String,
+    #[serde(default = "d_include")]
+    include: String,
+    #[serde(default)]
+    regex: bool,
+    root: Option<String>,
+}
+fn d_include() -> String {
+    "**/*".into()
+}
+
+async fn tool_grep(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<GrepReq>,
+) -> Json<serde_json::Value> {
+    let _ = s;
+    let roots = roots_for(req.root.as_deref());
+    let hits = tools::grep_files(&roots[0], &req.query, &req.include, req.regex, 200);
+    audit("grep", &serde_json::json!({"query": req.query}), true, &hits.first().map(|h| h.preview.clone()).unwrap_or_default());
+    Json(serde_json::json!({"hits": hits}))
+}
+
+#[derive(Debug, Deserialize)]
+struct ApplyReq {
+    path: String,
+    diff: String,
+    base_hash: Option<String>,
+    root: Option<String>,
+}
+
+async fn tool_apply(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<ApplyReq>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let roots = roots_for(req.root.as_deref());
+    let path = match tools::jail(&req.path, &roots, &s.models_dir.to_string_lossy()) {
+        Ok(p) => p,
+        Err(e) => return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error":{"code":"PATH_ESCAPE","message":e}}))),
+    };
+    let fs_path = if path.is_absolute() { path } else { PathBuf::from(&roots[0]).join(path) };
+    match tools::apply_diff(&fs_path, &req.diff, req.base_hash.as_deref()) {
+        Ok(n) => {
+            audit("apply_diff", &serde_json::json!({"path": req.path}), true, &format!("{n} hunks"));
+            (StatusCode::OK, Json(serde_json::json!({"applied": n})))
+        }
+        Err(e) => {
+            audit("apply_diff", &serde_json::json!({"path": req.path}), false, &e);
+            let code = if e.starts_with("HASH_CONFLICT") { StatusCode::CONFLICT } else { StatusCode::BAD_REQUEST };
+            (code, Json(serde_json::json!({"error":{"code":"APPLY","message":e}})))
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ExecReq {
+    command: String,
+    cwd: Option<String>,
+    #[serde(default = "d_timeout")]
+    timeout_s: u64,
+    approval_token: Option<String>,
+    root: Option<String>,
+}
+fn d_timeout() -> u64 {
+    120
+}
+
+async fn tool_exec(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<ExecReq>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let allow = vec!["dotnet".into(), "cargo".into(), "npm".into(), "node".into(), "python".into(), "git".into(), "go".into(), "echo".into(), "dir".into(), "ls".into(), "cat".into(), "type".into()];
+    let needs_token = tools::exec_allowed(&req.command, &allow).is_err();
+    if needs_token {
+        let ok = match &req.approval_token {
+            Some(t) => s.approvals.read().await.contains_key(t),
+            None => false,
+        };
+        if !ok {
+            audit("exec", &serde_json::json!({"command": req.command}), false, "needs approval");
+            return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error":{"code":"NEEDS_APPROVAL","message":"exec requires approval token"}})));
+        }
+    }
+    let cwd = req.cwd.clone().unwrap_or_else(|| roots_for(req.root.as_deref())[0].clone());
+    let mut cmd = if cfg!(windows) {
+        let mut c = tokio::process::Command::new("cmd");
+        c.args(["/C", &req.command]);
+        c
+    } else {
+        let mut c = tokio::process::Command::new("sh");
+        c.args(["-c", &req.command]);
+        c
+    };
+    cmd.current_dir(&cwd);
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+    let timeout = std::time::Duration::from_secs(req.timeout_s.min(600));
+    let out = tokio::time::timeout(timeout, cmd.output()).await;
+    match out {
+        Err(_) => {
+            audit("exec", &serde_json::json!({"command": req.command}), false, "timeout");
+            (StatusCode::REQUEST_TIMEOUT, Json(serde_json::json!({"error":{"code":"TIMEOUT","message":"killed on timeout"}})))
+        }
+        Ok(Err(e)) => {
+            audit("exec", &serde_json::json!({"command": req.command}), false, &e.to_string());
+            (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":{"code":"SPAWN","message":e.to_string()}})))
+        }
+        Ok(Ok(o)) => {
+            let mut stdout = String::from_utf8_lossy(&o.stdout).to_string();
+            let mut stderr = String::from_utf8_lossy(&o.stderr).to_string();
+            if stdout.len() > 65536 {
+                stdout = format!("...[truncated]\n{}", &stdout[stdout.len() - 65536..]);
+            }
+            if stderr.len() > 65536 {
+                stderr = format!("...[truncated]\n{}", &stderr[stderr.len() - 65536..]);
+            }
+            audit("exec", &serde_json::json!({"command": req.command}), o.status.success(), &stdout.lines().next().unwrap_or("").to_string());
+            (StatusCode::OK, Json(serde_json::json!({"code": o.status.code(), "stdout": stdout, "stderr": stderr})))
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GrantReq {
+    scope: String,
+    command: String,
+}
+
+async fn grant_approval(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<GrantReq>,
+) -> Json<serde_json::Value> {
+    let token = tools::token();
+    s.approvals.write().await.insert(token.clone(), tools::Approval { token: token.clone(), scope: req.scope.clone(), command: req.command.clone(), created: tools::now() });
+    audit("approve", &serde_json::json!({"scope": req.scope}), true, &req.command);
+    Json(serde_json::json!({"approval_token": token}))
+}
+
+async fn audit_tail(
+    State(_s): State<Arc<AppState>>,
+    Query(q): Query<HashMap<String, String>>,
+) -> Json<serde_json::Value> {
+    let n: usize = q.get("lines").and_then(|v| v.parse().ok()).unwrap_or(50);
+    let text = std::fs::read_to_string("./logs/agent.jsonl").unwrap_or_default();
+    let lines: Vec<String> = text.lines().rev().take(n).map(|s| s.to_string()).collect();
+    Json(serde_json::json!({"lines": lines}))
+}
+
+#[derive(Debug, Deserialize)]
+struct AgentReq {
+    mode: String,
+    message: String,
+    root: Option<String>,
+}
+
+async fn agent_run(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<AgentReq>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let _ = s;
+    let mode = agent::Mode::parse(&req.mode);
+    let steps = agent::plan(mode, &req.message);
+    let st = stream! {
+        yield Ok(Event::default().data(serde_json::json!({"type":"plan","steps": steps.len(), "mode": req.mode}).to_string()));
+        for step in steps {
+            if step.need_approval {
+                yield Ok(Event::default().data(serde_json::json!({"type":"awaiting_approval","tool": step.tool, "args": step.args, "reason": step.reason}).to_string()));
+            } else {
+                yield Ok(Event::default().data(serde_json::json!({"type":"tool_result","tool": step.tool, "ok": true}).to_string()));
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        yield Ok(Event::default().data("[DONE]"));
+    };
+    Sse::new(st)
+}
+
+// ---------- Complete ----------
+async fn complete(
+    State(s): State<Arc<AppState>>,
+    Json(req): Json<complete::CompleteReq>,
+) -> Json<serde_json::Value> {
+    let hints: Vec<String> = if req.hints.is_empty() {
+        // fallback: top chunk previews matching tail
+        let tail: String = req.prefix.chars().rev().take(60).collect::<String>().chars().rev().collect();
+        let chunks = s.chunks.read().await;
+        chunks
+            .iter()
+            .filter(|c| !tail.trim().is_empty() && c.text.contains(tail.trim()))
+            .take(5)
+            .map(|c| c.text.clone())
+            .collect()
+    } else {
+        req.hints.clone()
+    };
+    let (mut suggestions, cached, ms) = s.completer.complete(&req.prefix, &req.suffix, &req.file, &hints);
+    suggestions.truncate(req.top_k.min(3));
+    Json(serde_json::json!({
+        "suggestions": suggestions,
+        "cached": cached,
+        "took_ms": ms,
+    }))
+}
+
 async fn shutdown() -> Json<serde_json::Value> {
     info!("shutdown requested, flushing index WAL");
     tokio::spawn(async {
@@ -517,6 +827,8 @@ async fn main() {
         symbols: Arc::new(RwLock::new(Vec::new())),
         metrics: Arc::new(RwLock::new(Metrics::default())),
         cancels: Arc::new(RwLock::new(HashMap::new())),
+        approvals: Arc::new(RwLock::new(HashMap::new())),
+        completer: complete::Completer::new(),
     });
 
     let app = Router::new()
@@ -535,6 +847,15 @@ async fn main() {
         .route("/v1/chat/completions", post(chat))
         .route("/v1/chat/stream", post(chat_stream))
         .route("/v1/chat/cancel", post(chat_cancel))
+        .route("/v1/tools/read", post(tool_read))
+        .route("/v1/tools/glob", post(tool_glob))
+        .route("/v1/tools/grep", post(tool_grep))
+        .route("/v1/tools/apply-diff", post(tool_apply))
+        .route("/v1/tools/exec", post(tool_exec))
+        .route("/v1/approvals/grant", post(grant_approval))
+        .route("/v1/audit/tail", get(audit_tail))
+        .route("/v1/agent/run", post(agent_run))
+        .route("/v1/complete", post(complete))
         .route("/v1/shutdown", post(shutdown))
         .fallback(not_found)
         .layer(CorsLayer::permissive())
