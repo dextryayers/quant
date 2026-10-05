@@ -38,6 +38,7 @@ public sealed class TerminalView : Control
     {
         Focusable = true;
         IsTabStop = false;
+        ClipToBounds = true;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -63,8 +64,10 @@ public sealed class TerminalView : Control
             Unhook();
             Hook(Session);
             _follow = true;
+            _viewTop = 0;
             UpdateViewport();
             InvalidateVisual();
+            Focus();
         }
     }
 

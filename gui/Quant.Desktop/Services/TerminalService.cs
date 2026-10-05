@@ -20,6 +20,10 @@ public sealed class TerminalSession : ITermSession
     private bool _disposed;
     private readonly StringBuilder _input = new();
     private int _cols = 120;
+    private IReadOnlyList<TermRow>? _rowsCache;
+    private int _rowsCacheLen = -1;
+    private int _rowsCacheCols = -1;
+    private int _rowsCachePending = -1;
 
     public string Id { get; } = Guid.NewGuid().ToString("N")[..6];
     public string Cwd { get; }
@@ -45,9 +49,13 @@ public sealed class TerminalSession : ITermSession
     {
         get
         {
-            var rows = new List<TermRow>();
             string text;
             lock (_gate) { text = Output.ToString(); }
+            string pending;
+            lock (_gate) { pending = _input.ToString(); }
+            if (_rowsCache != null && text.Length == _rowsCacheLen && _cols == _rowsCacheCols && pending.Length == _rowsCachePending)
+                return _rowsCache;
+            var rows = new List<TermRow>();
             foreach (var raw in text.Split('\n'))
             {
                 var line = raw.TrimEnd('\r');
@@ -68,8 +76,6 @@ public sealed class TerminalSession : ITermSession
             }
             if (rows.Count == 0) rows.Add(new TermRow());
             // Echo the pending input line so typing is visible.
-            string pending;
-            lock (_gate) { pending = _input.ToString(); }
             if (pending.Length > 0)
             {
                 var row = new TermRow();
@@ -77,6 +83,10 @@ public sealed class TerminalSession : ITermSession
                     row.Cells.Add(new TermCell { Ch = c, Fg = 0xFFEFEFF2 });
                 rows.Add(row);
             }
+            _rowsCache = rows;
+            _rowsCacheLen = text.Length;
+            _rowsCacheCols = _cols;
+            _rowsCachePending = pending.Length;
             return rows;
         }
     }
@@ -293,6 +303,8 @@ public sealed class TerminalSession : ITermSession
         lock (_gate)
         {
             Output.Clear();
+            _input.Clear();
+            _rowsCache = null;
             Output.AppendLine($"— {ShellShort} — {Cwd} (cleared)");
         }
         Changed?.Invoke();

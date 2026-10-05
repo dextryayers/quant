@@ -106,9 +106,23 @@ public sealed class PtySession : ITermSession
     public int CursorCol { get { lock (_grid) return _grid.CursorCol; } }
     public bool CursorVisible => true;
 
+    private int _sentCols = -1;
+    private int _sentRows = -1;
+
     public void Resize(int cols, int rows)
     {
+        cols = Math.Max(20, Math.Min(500, cols));
+        rows = Math.Max(5, Math.Min(200, rows));
         lock (_grid) _grid.Resize(cols, rows);
+        // Talking to the live console on every drag tick would stutter,
+        // so only forward real size changes.
+        if (cols == _sentCols && rows == _sentRows)
+        {
+            Changed?.Invoke();
+            return;
+        }
+        _sentCols = cols;
+        _sentRows = rows;
         try
         {
             if (OperatingSystem.IsWindows() && ChildPid > 0)
@@ -174,19 +188,20 @@ public sealed class PtySession : ITermSession
 
     public void Clear()
     {
-        lock (_grid) _grid.Reset(120, 30);
+        lock (_grid) _grid.Reset(_grid.Cols, _grid.ViewRows);
         Changed?.Invoke();
     }
 
     public void Restart()
     {
         Kill();
+        lock (_grid) _grid.Reset(_grid.Cols, _grid.ViewRows);
         try
         {
             if (OperatingSystem.IsWindows())
-                StartWindows(120, 30);
+                StartWindows(_grid.Cols, _grid.ViewRows);
             else
-                StartUnix(120, 30);
+                StartUnix(_grid.Cols, _grid.ViewRows);
         }
         catch { }
         Changed?.Invoke();

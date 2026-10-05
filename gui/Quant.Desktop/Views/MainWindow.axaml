@@ -62,7 +62,7 @@
         </Border>
 
         <!-- Shell -->
-        <Grid Grid.Row="1" ColumnDefinitions="48,300,*,400">
+        <Grid Grid.Row="1" ColumnDefinitions="48,300,Auto,*,400">
             <!-- Activity bar -->
             <Border Grid.Column="0" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="0,10">
                 <StackPanel Spacing="6" HorizontalAlignment="Stretch">
@@ -106,7 +106,7 @@
             </Border>
 
             <!-- Side panel V0.1.0 Explorer + Search -->
-            <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="14" IsVisible="{Binding SideVisible}">
+            <Border Grid.Column="1" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,0,1,0" Padding="14" MinWidth="200" IsVisible="{Binding SideVisible}">
                 <Grid RowDefinitions="Auto,*,Auto">
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
                         <TextBlock Text="{Binding SideTitle}" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
@@ -439,8 +439,10 @@
                 </Grid>
             </Border>
 
-            <!-- Center V0.1.0: tabs + breadcrumbs + editor + bottom -->
-            <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*,200">
+            <GridSplitter Grid.Column="2" Width="5" Background="Transparent" ResizeDirection="Columns" />
+
+            <!-- Center: tabs + breadcrumbs + editor + bottom -->
+            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,*,Auto,200">
                 <ListBox Grid.Row="0" ItemsSource="{Binding Tabs}" SelectedItem="{Binding ActiveTab}" Background="{DynamicResource QuantSurface1}" Margin="0" Padding="8,4">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -565,7 +567,8 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
-                <Grid Grid.Row="3" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}">
+                <GridSplitter Grid.Row="3" Height="5" Background="Transparent" ResizeDirection="Rows" />
+                <Grid Grid.Row="4" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}" MinHeight="120">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
                         <Button Content="Problems" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
                         <Button Content="Output" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
@@ -627,7 +630,9 @@
                         <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
-                        <v:TerminalView Session="{Binding ActiveTerminal}" IsVisible="{Binding ShowTerminalView}" MinHeight="140" />
+                        <Border Background="{DynamicResource QuantEditorBg}" CornerRadius="8" IsVisible="{Binding ShowTerminalView}">
+                            <v:TerminalView Name="TermView" Session="{Binding ActiveTerminal}" MinHeight="120" />
+                        </Border>
                         <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -675,7 +680,7 @@
             </Grid>
 
             <!-- Right assistant: Codex-style thread + composer -->
-            <Grid Grid.Column="3" RowDefinitions="Auto,Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
+            <Grid Grid.Column="4" RowDefinitions="Auto,Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
                 <DockPanel Grid.Row="0" Margin="12,10,12,6">
                     <Button Content="{Binding StatusModel}" FontSize="12" FontWeight="SemiBold" Classes="nav" DockPanel.Dock="Left" VerticalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Change assistant"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">

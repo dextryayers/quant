@@ -15,6 +15,13 @@ public partial class MainWindow : Window
         var editor = this.FindControl<AvaloniaEdit.TextEditor>("Editor");
         var tree = this.FindControl<TreeView>("ExplorerTree");
         var composer = this.FindControl<TextBox>("Composer");
+        var termView = this.FindControl<TerminalView>("TermView");
+        if (termView != null)
+        {
+            // Guarantee keyboard focus lands in the terminal on click,
+            // even if the click hits padding around the rendered grid.
+            termView.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, __) => termView.Focus(), Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        }
         if (composer != null)
         {
             composer.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (s, e) =>
