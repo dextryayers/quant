@@ -29,6 +29,8 @@ public partial class App : Application
             {
                 DataContext = new MainViewModel(Config.BaseUrl, Config.EnginePort),
             };
+            // Auto-start sidecar so double-clicking QuantIDE.exe just works.
+            _ = new EngineSupervisor().EnsureRunningAsync(Config.EnginePort);
         }
 
         base.OnFrameworkInitializationCompleted();

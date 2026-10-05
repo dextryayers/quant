@@ -400,6 +400,12 @@ public partial class MainViewModel : ViewModelBase
     {
         StatusText = $"checking engine on :{_port}...";
         OutputLog += $"[health] GET :{_port}/health\n";
+        // Try auto-start sidecar before reporting offline.
+        if (!await EngineSupervisor.Healthy(_port))
+        {
+            OutputLog += "[health] not running, starting sidecar...\n";
+            await new EngineSupervisor().EnsureRunningAsync(_port);
+        }
         var h = await _engine.GetHealthAsync();
         try
         {

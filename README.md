@@ -36,5 +36,18 @@ Copy `quant.json.example` to `quant.json` to override port and model defaults. G
 - Models: `GET http://127.0.0.1:3737/v1/models`
 - Chat stream: `POST http://127.0.0.1:3737/v1/chat/stream` with SSE
 
+## Install (Windows x64, V0.1.0)
+Portable zip: `dist/QuantIDE-V0.1.0-win-x64.zip` (see GitHub Releases).
+Unzip anywhere and double-click `QuantIDE.exe`. The engine auto-starts.
+
+Or install with shortcuts:
+```powershell
+powershell -ExecutionPolicy Bypass -File installer/setup.ps1
+```
+Uninstall:
+```powershell
+powershell -ExecutionPolicy Bypass -File installer/uninstall.ps1
+```
+Unsigned build: SmartScreen may ask once.
+
 See `plan.md` Phase 0 to Phase 14 for build order.
-"# quant" 
