@@ -41,27 +41,27 @@
                 <StackPanel Spacing="6" HorizontalAlignment="Stretch">
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavExplorer}"/>
-                        <Button Content="EX" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Files"/>
+                        <Button Content="EX" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Explorer" ToolTip.Tip="Files"/>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSearch}"/>
-                        <Button Content="SE" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search"/>
+                        <Button Content="SE" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Search" ToolTip.Tip="Search"/>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavGit}"/>
-                        <Button Content="GI" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
+                        <Button Content="GI" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Git" ToolTip.Tip="Source control"/>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavChat}"/>
-                        <Button Content="CH" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Assistant"/>
+                        <Button Content="CH" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Chat" ToolTip.Tip="Assistant"/>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavModels}"/>
-                        <Button Content="MO" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Assistants"/>
+                        <Button Content="MO" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Assistants"/>
                     </Grid>
                     <Grid>
                         <Border Width="3" Height="22" CornerRadius="2" Background="{DynamicResource QuantAccent}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="3,0,0,0" IsVisible="{Binding NavSettings}"/>
-                        <Button Content="ST" Width="38" Height="38" HorizontalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
+                        <Button Content="ST" Width="38" Height="38" HorizontalAlignment="Center" Classes="nav" Command="{Binding SetActivityCommand}" CommandParameter="Settings" ToolTip.Tip="Settings"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -198,7 +198,7 @@
                                         <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding CancelDownloadCommand}" HorizontalAlignment="Left"/>
                                     </StackPanel>
                                 </Border>
-                                <TextBox Text="{Binding DownloadRepo}" Watermark="Source, e.g. Qwen/Example-GGUF" Padding="8,6"/>
+                                <TextBox Text="{Binding DownloadRepo}" Watermark="Source, e.g. Qwen/Example-Model" Padding="8,6"/>
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBox Grid.Column="0" Text="{Binding DownloadFile}" Watermark="File name" Padding="8,6" Margin="0,0,6,0"/>
                                     <Button Grid.Column="1" Content="Get" FontSize="11" Classes="primary" Command="{Binding DownloadCustomCommand}"/>
@@ -213,9 +213,9 @@
                             <Button Content="Forget workspace" FontSize="11" Command="{Binding ClearIndexCommand}" ToolTip.Tip="Remove what was learned about this workspace"/>
                             <TextBlock Text="EXTENSIONS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="List" FontSize="11" Command="{Binding ListExtensionsCommand}"/>
-                                <Button Content="MCP" FontSize="11" Command="{Binding LoadMcpCommand}"/>
-                                <Button Content="Cloud" FontSize="11" Command="{Binding ToggleCloudCommand}"/>
+                                <Button Content="List" FontSize="11" Classes="ghost" Command="{Binding ListExtensionsCommand}"/>
+                                <Button Content="MCP" FontSize="11" Classes="ghost" Command="{Binding LoadMcpCommand}"/>
+                                <Button Content="Cloud" FontSize="11" Classes="ghost" Command="{Binding ToggleCloudCommand}"/>
                             </StackPanel>
                             <ListBox ItemsSource="{Binding ExtensionList}" Background="Transparent" MaxHeight="120">
                                 <ListBox.ItemTemplate>
@@ -239,8 +239,8 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Tools" FontSize="11" Command="{Binding ListMcpToolsCommand}"/>
-                                <Button Content="Dry run" FontSize="11" Command="{Binding DryRunMcpCommand}"/>
+                                <Button Content="Tools" FontSize="11" Classes="ghost" Command="{Binding ListMcpToolsCommand}"/>
+                                <Button Content="Dry run" FontSize="11" Classes="ghost" Command="{Binding DryRunMcpCommand}"/>
                                 <Button Content="Call" FontSize="11" Command="{Binding CallMcpToolCommand}"/>
                             </StackPanel>
                             <TextBox Text="{Binding McpToolName}" Watermark="tool.name" Padding="8,6"/>
@@ -256,9 +256,9 @@
                             <TextBlock Text="{Binding GitBranch}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                             <TextBlock Text="{Binding GitAhead}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Refresh" FontSize="11" Command="{Binding RefreshGitCommand}"/>
-                                <Button Content="Stage" FontSize="11" Command="{Binding StageGitFileCommand}"/>
-                                <Button Content="Diff" FontSize="11" Command="{Binding ShowGitDiffCommand}"/>
+                                <Button Content="Refresh" FontSize="11" Classes="ghost" Command="{Binding RefreshGitCommand}"/>
+                                <Button Content="Stage" FontSize="11" Classes="ghost" Command="{Binding StageGitFileCommand}"/>
+                                <Button Content="Diff" FontSize="11" Classes="ghost" Command="{Binding ShowGitDiffCommand}"/>
                             </StackPanel>
                             <ListBox ItemsSource="{Binding GitFiles}" SelectedItem="{Binding SelectedGitFile}" Background="Transparent" MaxHeight="200">
                                 <ListBox.ItemTemplate>
@@ -272,8 +272,8 @@
                             </ListBox>
                             <TextBox Text="{Binding CommitMessage}" Watermark="Commit message" Padding="8,6"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Content="Commit" FontSize="11" Command="{Binding CommitNowCommand}"/>
-                                <Button Content="Gen msg" FontSize="11" Command="{Binding GenCommitMsgCommand}"/>
+                                <Button Content="Commit" FontSize="11" Classes="primary" Command="{Binding CommitNowCommand}"/>
+                                <Button Content="Gen msg" FontSize="11" Classes="ghost" Command="{Binding GenCommitMsgCommand}"/>
                             </StackPanel>
                             <TextBlock Text="HISTORY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <TextBox Text="{Binding GitLogQuery}" Watermark="Search history" Padding="8,6"/>
@@ -287,7 +287,7 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <Button Content="Open prior version" FontSize="11" Command="{Binding ShowPriorVersionCommand}"/>
+                            <Button Content="Open prior version" FontSize="11" Classes="ghost" Command="{Binding ShowPriorVersionCommand}"/>
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowSettings}">
@@ -296,7 +296,7 @@
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Appearance" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="{Binding ThemeLabel}" FontSize="11" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
+                                    <Button Content="{Binding ThemeLabel}" FontSize="11" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Switch appearance"/>
                                     <TextBlock Text="Calm by default, bright when you need it." FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </StackPanel>
@@ -308,15 +308,15 @@
                             </StackPanel>
                             <StackPanel Spacing="6">
                                 <TextBlock Text="Workspace" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
-                                <Button Content="Commands" FontSize="11" Command="{Binding OpenPaletteCommand}" HorizontalAlignment="Left"/>
-                                <Button Content="Forget workspace" FontSize="11" Command="{Binding ClearIndexCommand}" HorizontalAlignment="Left" ToolTip.Tip="Remove what was learned about this workspace"/>
+                                <Button Content="Commands" FontSize="11" Classes="ghost" Command="{Binding OpenPaletteCommand}" HorizontalAlignment="Left"/>
+                                <Button Content="Forget workspace" FontSize="11" Classes="ghost" Command="{Binding ClearIndexCommand}" HorizontalAlignment="Left" ToolTip.Tip="Remove what was learned about this workspace"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowChats}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="CONVERSATIONS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}"/>
-                            <Button Content="New conversation" FontSize="11" Command="{Binding NewThreadCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            <Button Content="New conversation" FontSize="11" Classes="primary" Command="{Binding NewThreadCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                             <TextBox Text="{Binding ThreadSearch}" Watermark="Search conversations" Padding="8,6"/>
                             <ListBox ItemsSource="{Binding ThreadView}" SelectedItem="{Binding SelectedThread}" Background="Transparent">
                                 <ListBox.ItemTemplate>
@@ -326,7 +326,7 @@
                                                 <TextBlock Text="{Binding Title}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding Updated, StringFormat='{}{0:dd MMM HH:mm}'}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="×" FontSize="11" Padding="7,2" VerticalAlignment="Center" Command="{Binding $parent[Window].DataContext.DeleteThreadCommand}" CommandParameter="{Binding}" ToolTip.Tip="Delete"/>
+                                            <Button Grid.Column="1" Content="×" FontSize="11" Padding="7,2" VerticalAlignment="Center" Classes="danger" Command="{Binding $parent[Window].DataContext.DeleteThreadCommand}" CommandParameter="{Binding}" ToolTip.Tip="Delete"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -352,30 +352,30 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" VerticalAlignment="Center"/>
                                 <TextBlock Text="*" FontSize="12" Foreground="{DynamicResource QuantWarning}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center"/>
-                                <Button Content="×" FontSize="11" Padding="7,2" Margin="2,0,0,0" VerticalAlignment="Center" Command="{Binding $parent[Window].DataContext.CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close"/>
+                                <Button Content="×" FontSize="11" Padding="7,2" Margin="2,0,0,0" VerticalAlignment="Center" Classes="ghost" Command="{Binding $parent[Window].DataContext.CloseTabCommand}" CommandParameter="{Binding}" ToolTip.Tip="Close"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <DockPanel Grid.Row="1" Margin="12,6,12,2">
                     <TextBlock Text="{Binding Breadcrumbs}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Button Content="Preview" FontSize="11" Command="{Binding TogglePreviewCommand}" ToolTip.Tip="Toggle Markdown/HTML preview"/>
-                        <Button Content="Complete" FontSize="11" Command="{Binding ToggleCompleteCommand}" ToolTip.Tip="Toggle inline completion"/>
-                        <Button Content="Save" FontSize="11" Command="{Binding SaveTabCommand}"/>
-                        <Button Content="Save All" FontSize="11" Command="{Binding SaveAllTabsCommand}"/>
-                        <Button Content="Close" FontSize="11" Command="{Binding CloseTabCommand}"/>
-                        <Button Content="Zen" FontSize="11" Command="{Binding ToggleZenCommand}"/>
-                    </StackPanel>
+                    <WrapPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Content="Preview" FontSize="11" Classes="ghost" Command="{Binding TogglePreviewCommand}" ToolTip.Tip="Toggle Markdown/HTML preview" Margin="0,0,6,0"/>
+                        <Button Content="Complete" FontSize="11" Classes="ghost" Command="{Binding ToggleCompleteCommand}" ToolTip.Tip="Toggle inline completion" Margin="0,0,6,0"/>
+                        <Button Content="Save" FontSize="11" Classes="ghost" Command="{Binding SaveTabCommand}" Margin="0,0,6,0"/>
+                        <Button Content="Save All" FontSize="11" Classes="ghost" Command="{Binding SaveAllTabsCommand}" Margin="0,0,6,0"/>
+                        <Button Content="Close" FontSize="11" Classes="ghost" Command="{Binding CloseTabCommand}" Margin="0,0,6,0"/>
+                        <Button Content="Zen" FontSize="11" Classes="ghost" Command="{Binding ToggleZenCommand}"/>
+                    </WrapPanel>
                 </DockPanel>
                 <Border Grid.Row="2" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="0,1,0,1" IsVisible="{Binding HasTabs}">
                     <Grid RowDefinitions="Auto,Auto,Auto,*">
                         <DockPanel Grid.Row="0" Margin="12,10,12,6">
                             <TextBlock Text="EDITOR" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                <Button Content="Files" FontSize="11" Command="{Binding ToggleSideCommand}" ToolTip.Tip="Show files"/>
-                                <Button Content="Console" FontSize="11" Command="{Binding ToggleBottomCommand}" ToolTip.Tip="Show console"/>
-                                <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}" ToolTip.Tip="Show assistant"/>
+                                <Button Content="Files" FontSize="11" Classes="ghost" Command="{Binding ToggleSideCommand}" ToolTip.Tip="Show files"/>
+                                <Button Content="Console" FontSize="11" Classes="ghost" Command="{Binding ToggleBottomCommand}" ToolTip.Tip="Show console"/>
+                                <Button Content="Assistant" FontSize="11" Classes="ghost" Command="{Binding ToggleRightCommand}" ToolTip.Tip="Show assistant"/>
                             </StackPanel>
                         </DockPanel>
                         <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="12,0,12,6">
@@ -390,9 +390,9 @@
                                 <TextBlock Text="{Binding GhostText}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextMuted}" DockPanel.Dock="Left" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
                                     <TextBlock Text="{Binding GhostWhy}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
-                                    <Button Content="Tab" FontSize="11" Command="{Binding AcceptGhostCommand}" ToolTip.Tip="Accept full suggestion"/>
-                                    <Button Content="Word" FontSize="11" Command="{Binding AcceptWordCommand}" ToolTip.Tip="Accept word (Ctrl+Right)"/>
-                                    <Button Content="Next" FontSize="11" Command="{Binding NextGhostCommand}" ToolTip.Tip="Next suggestion (Alt+])"/>
+                                    <Button Content="Tab" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding AcceptGhostCommand}" ToolTip.Tip="Accept full suggestion"/>
+                                    <Button Content="Word" FontSize="11" Classes="ghost" Command="{Binding AcceptWordCommand}" ToolTip.Tip="Accept word (Ctrl+Right)"/>
+                                    <Button Content="Next" FontSize="11" Classes="ghost" Command="{Binding NextGhostCommand}" ToolTip.Tip="Next suggestion (Alt+])"/>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -427,37 +427,37 @@
                         </StackPanel>
                         <TextBlock Text="Open a file from the left, or ask the assistant anything. Your code never leaves this device." FontSize="13" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap" TextAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <Button Content="New file" FontSize="11" Command="{Binding NewFileCommand}"/>
-                            <Button Content="Commands" FontSize="11" Command="{Binding OpenPaletteCommand}"/>
-                            <Button Content="Assistant" FontSize="11" Command="{Binding ToggleRightCommand}"/>
+                            <Button Content="New file" FontSize="11" Classes="primary" Command="{Binding NewFileCommand}"/>
+                            <Button Content="Commands" FontSize="11" Classes="ghost" Command="{Binding OpenPaletteCommand}"/>
+                            <Button Content="Assistant" FontSize="11" Classes="ghost" Command="{Binding ToggleRightCommand}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
                 <Grid Grid.Row="3" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="12,8,12,4">
-                        <Button Content="Problems" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
-                        <Button Content="Output" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
-                        <Button Content="Terminal" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal"/>
-                        <Button Content="Tasks" FontSize="12" Command="{Binding SetBottomTabCommand}" CommandParameter="Tasks"/>
+                        <Button Content="Problems" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Problems"/>
+                        <Button Content="Output" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Output"/>
+                        <Button Content="Terminal" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Terminal"/>
+                        <Button Content="Tasks" FontSize="12" Classes="ghost" Command="{Binding SetBottomTabCommand}" CommandParameter="Tasks"/>
                     </StackPanel>
                     <Grid Grid.Row="1" Margin="12,0,12,8">
                     <Grid RowDefinitions="Auto,*" IsVisible="{Binding !ShowProblemsView}">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
-                        <TextBox Text="{Binding TerminalInput}" Watermark="Type shell command, Enter to run" Width="320" Padding="8,6"/>
+                        <TextBox Text="{Binding TerminalInput}" Watermark="Type a command, Enter to run" Width="320" Padding="8,6"/>
                         <Button Content="Run" FontSize="11" Command="{Binding SendTerminalCommand}"/>
-                        <Button Content="Kill" FontSize="11" Command="{Binding KillTerminalCommand}"/>
-                        <Button Content="Attach" FontSize="11" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
+                        <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}"/>
+                        <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
                     </StackPanel>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
-                        <Button Content="Load" FontSize="11" Command="{Binding LoadTasksCommand}"/>
-                        <Button Content="Run" FontSize="11" Command="{Binding RunTaskCommand}"/>
-                        <Button Content="Launch" FontSize="11" Command="{Binding LoadLaunchesCommand}"/>
-                        <Button Content="Start" FontSize="11" Command="{Binding StartLaunchCommand}"/>
-                        <Button Content="Stop" FontSize="11" Command="{Binding StopLaunchCommand}"/>
-                        <Button Content="Template" FontSize="11" Command="{Binding WriteLaunchTemplateCommand}"/>
-                        <Button Content="Test" FontSize="11" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Check error detection on a sample"/>
-                        <Button Content="Copy output" FontSize="11" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Send the output to the assistant"/>
-                    </StackPanel>
+                    <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
+                        <Button Content="Load" FontSize="11" Classes="ghost" Command="{Binding LoadTasksCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Run" FontSize="11" Classes="primary" Command="{Binding RunTaskCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Launch" FontSize="11" Classes="ghost" Command="{Binding LoadLaunchesCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Start" FontSize="11" Command="{Binding StartLaunchCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding StopLaunchCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Template" FontSize="11" Classes="ghost" Command="{Binding WriteLaunchTemplateCommand}" Margin="0,0,6,4"/>
+                        <Button Content="Test" FontSize="11" Classes="ghost" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Check error detection on a sample" Margin="0,0,6,4"/>
+                        <Button Content="Copy output" FontSize="11" Classes="ghost" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Send the output to the assistant" Margin="0,0,0,4"/>
+                    </WrapPanel>
                     <Border Grid.Row="1" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                         <Grid>
                         <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
@@ -493,7 +493,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
                             <TextBlock Text="{Binding Problems.Count}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
                             <TextBlock Text="problems" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
-                            <Button Content="Copy for chat" FontSize="11" Command="{Binding CopyProblemsForChatCommand}"/>
+                            <Button Content="Copy for chat" FontSize="11" Classes="ghost" Command="{Binding CopyProblemsForChatCommand}"/>
                         </StackPanel>
                         <TextBlock Grid.Row="1" Text="All clear. No problems found." FontSize="12" Foreground="{DynamicResource QuantTextMuted}" IsVisible="{Binding NoProblems}" Margin="2,4,0,0"/>
                     <ListBox Grid.Row="1" ItemsSource="{Binding Problems}" Background="Transparent" MaxHeight="140">
@@ -515,17 +515,17 @@
             <!-- Right assistant: Codex-style thread + composer -->
             <Grid Grid.Column="3" RowDefinitions="Auto,Auto,Auto,*,Auto" Background="{DynamicResource QuantBgBase}" IsVisible="{Binding RightVisible}">
                 <DockPanel Grid.Row="0" Margin="12,10,12,6">
-                    <Button Content="{Binding StatusModel}" FontSize="12" FontWeight="SemiBold" DockPanel.Dock="Left" VerticalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Change assistant"/>
+                    <Button Content="{Binding StatusModel}" FontSize="12" FontWeight="SemiBold" Classes="nav" DockPanel.Dock="Left" VerticalAlignment="Center" Command="{Binding SetActivityCommand}" CommandParameter="Models" ToolTip.Tip="Change assistant"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Button Content="New" FontSize="11" Command="{Binding NewThreadCommand}" ToolTip.Tip="New conversation"/>
-                        <Button Content="Export" FontSize="11" Command="{Binding ExportThreadCommand}" ToolTip.Tip="Save as file"/>
+                        <Button Content="New" FontSize="11" Classes="primary" Command="{Binding NewThreadCommand}" ToolTip.Tip="New conversation"/>
+                        <Button Content="Export" FontSize="11" Classes="ghost" Command="{Binding ExportThreadCommand}" ToolTip.Tip="Save as file"/>
                     </StackPanel>
                 </DockPanel>
                 <StackPanel Grid.Row="1" Margin="12,0,12,6" Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Button Content="Ask" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Ask"/>
-                        <Button Content="Edit" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Edit"/>
-                        <Button Content="Agent" FontSize="11" Command="{Binding SetModeCommand}" CommandParameter="Agent"/>
+                        <Button Content="Ask" FontSize="11" Classes="ghost" Command="{Binding SetModeCommand}" CommandParameter="Ask"/>
+                        <Button Content="Edit" FontSize="11" Classes="ghost" Command="{Binding SetModeCommand}" CommandParameter="Edit"/>
+                        <Button Content="Agent" FontSize="11" Classes="ghost" Command="{Binding SetModeCommand}" CommandParameter="Agent"/>
                         <TextBlock Text="{Binding AgentStatus}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Approvals}" Background="Transparent" MaxHeight="140">
@@ -536,8 +536,8 @@
                                         <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                         <TextBlock Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Button Content="Allow once" FontSize="11" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}"/>
-                                            <Button Content="Deny" FontSize="11" Command="{Binding $parent[Window].DataContext.DenyCardCommand}" CommandParameter="{Binding}"/>
+                                            <Button Content="Allow once" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.ApproveCardCommand}" CommandParameter="{Binding}"/>
+                                            <Button Content="Deny" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.DenyCardCommand}" CommandParameter="{Binding}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -565,9 +565,9 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Button Content="Attach file" FontSize="11" Command="{Binding AddFileChipCommand}"/>
-                        <Button Content="Clear" FontSize="11" Command="{Binding ClearChipsCommand}"/>
-                        <Button Content="Dry run" FontSize="11" Command="{Binding DryRunCommand}"/>
+                        <Button Content="Attach file" FontSize="11" Classes="ghost" Command="{Binding AddFileChipCommand}"/>
+                        <Button Content="Clear" FontSize="11" Classes="ghost" Command="{Binding ClearChipsCommand}"/>
+                        <Button Content="Dry run" FontSize="11" Classes="ghost" Command="{Binding DryRunCommand}"/>
                     </StackPanel>
                 </StackPanel>
                 <ListBox Grid.Row="3" ItemsSource="{Binding Messages}" Background="Transparent" Margin="12,0,12,8" Padding="0" MaxWidth="760" HorizontalAlignment="Stretch">
@@ -587,9 +587,9 @@
                                     <TextBlock Text="{Binding Author}" FontWeight="SemiBold" FontSize="11" LetterSpacing="1" Foreground="{DynamicResource QuantTextMuted}"/>
                                     <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{DynamicResource QuantTextPrimary}"/>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Button Content="Copy code" FontSize="11" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}"/>
-                                        <Button Content="Insert" FontSize="11" Command="{Binding $parent[Window].DataContext.InsertLastCodeCommand}"/>
-                                        <Button Content="Apply" FontSize="11" Command="{Binding $parent[Window].DataContext.ApplyLastCodeCommand}"/>
+                                        <Button Content="Copy code" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.CopyLastCodeCommand}"/>
+                                        <Button Content="Insert" FontSize="11" Classes="ghost" Command="{Binding $parent[Window].DataContext.InsertLastCodeCommand}"/>
+                                        <Button Content="Apply" FontSize="11" Classes="primary" Padding="10,5" Command="{Binding $parent[Window].DataContext.ApplyLastCodeCommand}"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -601,15 +601,15 @@
                 </ListBox>
                 <Grid Grid.Row="4" RowDefinitions="Auto,Auto" Margin="12,0,12,12">
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-                        <Button Content="Stop" FontSize="11" Command="{Binding StopChatCommand}" IsEnabled="{Binding IsBusy}"/>
-                        <Button Content="Undo edit" FontSize="11" Command="{Binding UndoDiffCommand}" ToolTip.Tip="Undo the last applied edit"/>
+                        <Button Content="Stop" FontSize="11" Classes="ghost" Command="{Binding StopChatCommand}" IsEnabled="{Binding IsBusy}"/>
+                        <Button Content="Undo edit" FontSize="11" Classes="ghost" Command="{Binding UndoDiffCommand}" ToolTip.Tip="Undo the last applied edit"/>
                         <TextBlock Text="Enter to send • Shift+Enter for a new line" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Border Grid.Row="1" CornerRadius="16" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" Padding="6">
                         <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Button Grid.Column="0" Content="+" FontSize="16" Width="36" Height="36" CornerRadius="18" Command="{Binding AttachFileCommand}" ToolTip.Tip="Attach a file" VerticalAlignment="Bottom"/>
+                            <Button Grid.Column="0" Content="+" FontSize="16" Width="36" Height="36" CornerRadius="18" Classes="ghost" Command="{Binding AttachFileCommand}" ToolTip.Tip="Attach a file" VerticalAlignment="Bottom"/>
                             <TextBox Grid.Column="1" Name="Composer" Text="{Binding InputText}" Watermark="Ask anything…" Padding="10,9" Margin="6,0" MaxHeight="160" AcceptsReturn="True" Background="Transparent" BorderThickness="0" VerticalAlignment="Center"/>
-                            <Button Grid.Column="2" Content="↑" FontSize="16" Width="36" Height="36" CornerRadius="18" Command="{Binding SendCommand}" IsVisible="{Binding ShowSend}" ToolTip.Tip="Send" VerticalAlignment="Bottom"/>
+                            <Button Grid.Column="2" Content="↑" FontSize="16" Width="36" Height="36" CornerRadius="18" Classes="primary" Command="{Binding SendCommand}" IsVisible="{Binding ShowSend}" ToolTip.Tip="Send" VerticalAlignment="Bottom"/>
                             <Button Grid.Column="2" Content="■" FontSize="12" Width="36" Height="36" CornerRadius="18" Command="{Binding StopChatCommand}" IsVisible="{Binding IsBusy}" ToolTip.Tip="Stop" VerticalAlignment="Bottom"/>
                         </Grid>
                     </Border>
@@ -640,7 +640,7 @@
                                 <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource QuantTextPrimary}"/>
                                 <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="X" Margin="8,0,0,0" Padding="8,4" Command="{Binding $parent[Window].DataContext.DismissToastCommand}" CommandParameter="{Binding}"/>
+                            <Button Grid.Column="1" Content="X" Margin="8,0,0,0" Padding="8,4" Classes="ghost" Command="{Binding $parent[Window].DataContext.DismissToastCommand}" CommandParameter="{Binding}"/>
                         </Grid>
                     </Border>
                 </DataTemplate>
