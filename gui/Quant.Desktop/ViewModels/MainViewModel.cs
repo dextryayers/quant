@@ -76,7 +76,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<EngineModel> Models { get; } = new();
     public ObservableCollection<ApprovalCard> Approvals { get; } = new();
     public ObservableCollection<DevTask> Tasks { get; } = new();
-    public ObservableCollection<TerminalSession> Terminals { get; } = new();
+    public ObservableCollection<ITermSession> Terminals { get; } = new();
     public ObservableCollection<GitFile> GitFiles { get; } = new();
     public ObservableCollection<GitLog> GitLogs { get; } = new();
     public ObservableCollection<LaunchProfile> Launches { get; } = new();
@@ -246,10 +246,7 @@ public partial class MainViewModel : ViewModelBase
     public partial string ChatMode { get; set; } = "Edit";
 
     [ObservableProperty]
-    public partial string TerminalInput { get; set; } = "";
-
-    [ObservableProperty]
-    public partial TerminalSession? ActiveTerminal { get; set; }
+    public partial ITermSession? ActiveTerminal { get; set; }
 
     [ObservableProperty]
     public partial string AgentStatus { get; set; } = "idle";
@@ -1992,14 +1989,28 @@ public partial class MainViewModel : ViewModelBase
         if (Approvals.Count == 0) AgentStatus = "done";
     }
 
-    // ---------- Phase 9.3 Terminal: full interactive shells ----------
+    // ---------- Terminal: single real surface (pty on Windows, pipes fallback) ----------
     public bool IsWindows => TerminalSession.IsWindows;
+
+    private ITermSession CreateSession(string cwd, string? shell)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            try { return PtySession.Start(cwd, shell); }
+            catch { }
+        }
+        else
+        {
+            try { return PtySession.Start(cwd, shell); }
+            catch { }
+        }
+        return new TerminalSession(cwd, shell);
+    }
 
     [RelayCommand]
     private void NewTerminal(string? shell)
     {
-        var term = new TerminalSession(_workspace.ActiveRoot ?? ".", shell);
-        term.Changed += () => OnPropertyChanged(nameof(TerminalOutput));
+        var term = CreateSession(_workspace.ActiveRoot ?? ".", shell);
         Terminals.Add(term);
         ActiveTerminal = term;
         BottomTab = "Terminal";
@@ -2012,51 +2023,35 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ActivateTerminal(TerminalSession? term)
+    private void ActivateTerminal(ITermSession? term)
     {
         if (term == null) return;
         ActiveTerminal = term;
-        OnPropertyChanged(nameof(TerminalOutput));
     }
 
     [RelayCommand]
     private void ClearTerminal()
     {
         ActiveTerminal?.Clear();
-        OnPropertyChanged(nameof(TerminalOutput));
     }
 
     [RelayCommand]
     private void RestartTerminal()
     {
         ActiveTerminal?.Restart();
-        OnPropertyChanged(nameof(TerminalOutput));
-    }
-
-    public string TerminalOutput => ActiveTerminal?.Output.ToString() ?? "No terminal yet. Pick a shell above.";
-
-    [RelayCommand]
-    private void SendTerminal()
-    {
-        if (ActiveTerminal == null || string.IsNullOrWhiteSpace(TerminalInput)) return;
-        var cmd = TerminalInput.Trim();
-        TerminalInput = "";
-        ActiveTerminal.SendLine(cmd);
-        OnPropertyChanged(nameof(TerminalOutput));
     }
 
     [RelayCommand]
     private void KillTerminal()
     {
         ActiveTerminal?.Kill();
-        OnPropertyChanged(nameof(TerminalOutput));
     }
 
     [RelayCommand]
     private void AttachTerminalOutput()
     {
         if (ActiveTerminal == null) return;
-        var text = ActiveTerminal.Output.ToString();
+        var text = ActiveTerminal.PlainText;
         if (text.Length > 4000) text = text[^4000..];
         Chips.Add(new ContextChip { Kind = "terminal", Label = $"terminal {ActiveTerminal.Id}", Path = "", Tokens = text.Length / 4 });
         Messages.Add(new ChatMessage { Role = "user", Content = "Terminal output:\n" + text });
@@ -2090,21 +2085,25 @@ public partial class MainViewModel : ViewModelBase
         task.Running = true;
         BottomTab = "Tasks";
         BottomVisible = true;
+        ShowTerminalView = true;
+        ShowTasksView = false;
+        ShowOutputView = false;
+        ShowProblemsView = false;
         OutputLog += $"[task] run {task.Label}: {task.Command}\n";
-        var term = new TerminalSession(task.Cwd);
+        var term = CreateSession(task.Cwd, null);
         term.Changed += () =>
         {
-            OutputLog = term.Output.ToString();
+            var text = term.PlainText;
+            OutputLog = text.Length > 64000 ? text[^64000..] : text;
             // Live problem parsing so failed builds populate Problems.
             Problems.Clear();
-            foreach (var p in _problems.Parse(term.Output.ToString(), "task"))
+            foreach (var p in _problems.Parse(text, "task"))
                 Problems.Add(p);
         };
         Terminals.Add(term);
         ActiveTerminal = term;
-        term.Send(task.Command);
+        term.SendText(task.Command + "\r");
         task.Running = false;
-        OnPropertyChanged(nameof(TerminalOutput));
     }
 
     // ---------- Phase 11 Git ----------
@@ -2259,7 +2258,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void CopyFailureForChat()
     {
-        var text = ActiveTerminal?.Output.ToString() ?? OutputLog;
+        var text = ActiveTerminal?.PlainText ?? OutputLog;
         if (text.Length > 4000) text = text[^4000..];
         Messages.Add(new ChatMessage { Role = "user", Content = "Failure output:\n" + text });
         PushToast("Failure attached", "Terminal tail added to chat.", "");

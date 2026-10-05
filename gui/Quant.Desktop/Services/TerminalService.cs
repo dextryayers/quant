@@ -12,12 +12,14 @@ namespace Quant.Desktop.Services;
 /// Full interactive shell session. One persistent process per session:
 /// stdin stays open, cd and env persist, output streams live.
 /// Windows: PowerShell (pwsh, powershell) or CMD. Unix: $SHELL, bash, sh.
-public sealed class TerminalSession : IDisposable
+public sealed class TerminalSession : ITermSession
 {
     private Process? _proc;
     private StreamWriter? _stdin;
     private readonly object _gate = new();
     private bool _disposed;
+    private readonly StringBuilder _input = new();
+    private int _cols = 120;
 
     public string Id { get; } = Guid.NewGuid().ToString("N")[..6];
     public string Cwd { get; }
@@ -26,6 +28,93 @@ public sealed class TerminalSession : IDisposable
     public StringBuilder Output { get; } = new();
     public bool Running => _proc != null && !_proc.HasExited;
     public string Label => $"{ShellShort} · {Id}";
+
+    public string PlainText
+    {
+        get
+        {
+            lock (_gate)
+            {
+                var s = Output.ToString();
+                return s.Length > 64000 ? s[^64000..] : s;
+            }
+        }
+    }
+
+    public IReadOnlyList<TermRow> Rows
+    {
+        get
+        {
+            var rows = new List<TermRow>();
+            string text;
+            lock (_gate) { text = Output.ToString(); }
+            foreach (var raw in text.Split('\n'))
+            {
+                var line = raw.TrimEnd('\r');
+                if (line.Length == 0)
+                {
+                    rows.Add(new TermRow());
+                    continue;
+                }
+                for (var i = 0; i < line.Length; i += _cols)
+                {
+                    var row = new TermRow();
+                    var n = Math.Min(_cols, line.Length - i);
+                    for (var k = 0; k < n; k++)
+                        row.Cells.Add(new TermCell { Ch = line[i + k], Fg = 0xFFA7A7B3 });
+                    rows.Add(row);
+                    if (rows.Count > 2100) rows.RemoveRange(0, rows.Count - 2100);
+                }
+            }
+            if (rows.Count == 0) rows.Add(new TermRow());
+            // Echo the pending input line so typing is visible.
+            string pending;
+            lock (_gate) { pending = _input.ToString(); }
+            if (pending.Length > 0)
+            {
+                var row = new TermRow();
+                foreach (var c in ("$ " + pending).ToCharArray())
+                    row.Cells.Add(new TermCell { Ch = c, Fg = 0xFFEFEFF2 });
+                rows.Add(row);
+            }
+            return rows;
+        }
+    }
+
+    public int CursorRow => Rows.Count - 1;
+    public int CursorCol => 0;
+    public bool CursorVisible => Running;
+
+    public void SendText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        lock (_gate) { _input.Append(text); }
+        Changed?.Invoke();
+    }
+
+    public void SendKey(TermKey key)
+    {
+        if (key == TermKey.Enter)
+        {
+            string cmd;
+            lock (_gate) { cmd = _input.ToString(); _input.Clear(); }
+            SendLine(cmd);
+        }
+        else if (key == TermKey.Backspace)
+        {
+            lock (_gate) { if (_input.Length > 0) _input.Remove(_input.Length - 1, 1); }
+            Changed?.Invoke();
+        }
+        else if (key == TermKey.CtrlC)
+        {
+            Kill();
+        }
+    }
+
+    public void Resize(int cols, int rows)
+    {
+        _cols = Math.Max(20, cols);
+    }
     public event Action? Changed;
 
     private const int MaxChars = 131072;
@@ -217,7 +306,9 @@ public sealed class TerminalSession : IDisposable
         Changed?.Invoke();
     }
 
-    public void Kill(bool silent = false)
+    public void Kill() => Kill(false);
+
+    public void Kill(bool silent)
     {
         try
         {

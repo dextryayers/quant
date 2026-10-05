@@ -575,8 +575,8 @@
                     <Grid Grid.Row="1" Margin="12,0,12,8">
                     <Grid RowDefinitions="Auto,*" IsVisible="{Binding !ShowProblemsView}">
                     <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTerminalView}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <ItemsControl ItemsSource="{Binding Terminals}">
+                        <WrapPanel Orientation="Horizontal">
+                            <ItemsControl ItemsSource="{Binding Terminals}" Margin="0,0,6,0">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel/>
@@ -588,32 +588,24 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" ToolTip.Tip="New shell here">
+                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" ToolTip.Tip="New shell here" Margin="0,0,6,4">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
                                     <TextBlock Text="PowerShell" FontSize="11" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" CommandParameter="cmd" ToolTip.Tip="New raw CMD here" IsVisible="{Binding IsWindows}">
+                            <Button FontSize="11" Classes="ghost" Command="{Binding NewTerminalCommand}" CommandParameter="cmd" ToolTip.Tip="New raw CMD here" IsVisible="{Binding IsWindows}" Margin="0,0,6,4">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
+                                    <Path Data="{x:Static v:Icons.Plus}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineJoin="Round" StrokeLineCap="Round" Fill="Transparent" VerticalAlignment="Center"/>
                                     <TextBlock Text="CMD" FontSize="11" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Content="Restart" FontSize="11" Classes="ghost" Command="{Binding RestartTerminalCommand}" ToolTip.Tip="Restart this shell"/>
-                            <Button Content="Clear" FontSize="11" Classes="ghost" Command="{Binding ClearTerminalCommand}"/>
-                            <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}"/>
-                            <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context"/>
-                        </StackPanel>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBox Grid.Column="0" Name="TerminalInput" Text="{Binding TerminalInput}" Watermark="Type here, Enter runs it in the live shell" Padding="8,6" Margin="0,0,6,0"/>
-                            <Button Grid.Column="1" Command="{Binding SendTerminalCommand}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="{x:Static v:Icons.Play}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource QuantTextSecondary}" StrokeThickness="1.8" StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Run" FontSize="11" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                        </Grid>
+                            <Button Content="Restart" FontSize="11" Classes="ghost" Command="{Binding RestartTerminalCommand}" ToolTip.Tip="Restart this shell" Margin="0,0,6,4"/>
+                            <Button Content="Clear" FontSize="11" Classes="ghost" Command="{Binding ClearTerminalCommand}" Margin="0,0,6,4"/>
+                            <Button Content="Kill" FontSize="11" Classes="ghost" Command="{Binding KillTerminalCommand}" Margin="0,0,6,4"/>
+                            <Button Content="Attach" FontSize="11" Classes="ghost" Command="{Binding AttachTerminalOutputCommand}" ToolTip.Tip="Attach output as chat context" Margin="0,0,0,4"/>
+                        </WrapPanel>
+                        <TextBlock Text="Click inside and type. Ctrl+C stops, arrows and Tab work like the real thing." FontSize="11" Foreground="{DynamicResource QuantTextMuted}"/>
                     </StackPanel>
                     <WrapPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
                         <Button Content="Load" FontSize="11" Classes="ghost" Command="{Binding LoadTasksCommand}" Margin="0,0,6,4"/>
@@ -630,14 +622,12 @@
                         <Button Content="Test" FontSize="11" Classes="ghost" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Check error detection on a sample" Margin="0,0,6,4"/>
                         <Button Content="Copy output" FontSize="11" Classes="ghost" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Send the output to the assistant" Margin="0,0,0,4"/>
                     </WrapPanel>
-                    <Border Grid.Row="1" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
+                    <Border Grid.Row="1" Padding="6" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                         <Grid>
                         <ScrollViewer IsVisible="{Binding ShowOutputView}" MaxHeight="140">
                             <TextBlock Text="{Binding OutputLog}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
-                        <ScrollViewer Name="TerminalScroll" IsVisible="{Binding ShowTerminalView}" MaxHeight="140">
-                            <TextBlock Text="{Binding TerminalOutput}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
-                        </ScrollViewer>
+                        <v:TerminalView Session="{Binding ActiveTerminal}" IsVisible="{Binding ShowTerminalView}" MinHeight="140" />
                         <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
