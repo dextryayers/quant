@@ -24,6 +24,10 @@ public sealed class CommandRegistry
         new() { Id = "engine.check", Title = "Engine: Check Health", Group = "Engine", Hint = "" },
         new() { Id = "engine.models", Title = "Engine: List Models", Group = "Engine", Hint = "" },
         new() { Id = "workspace.openFolder", Title = "Workspace: Open Folder", Group = "Workspace", Hint = "Ctrl+K Ctrl+O" },
+        new() { Id = "echo.hello", Title = "Echo: Hello", Group = "Sample", Hint = "" },
+        new() { Id = "echo.time", Title = "Echo: Time", Group = "Sample", Hint = "" },
+        new() { Id = "launch.start", Title = "Launch: Start Selected", Group = "Run", Hint = "" },
+        new() { Id = "preview.toggle", Title = "View: Toggle Preview", Group = "View", Hint = "" },
     };
 
     public IReadOnlyList<CommandItem> Filter(string query)

@@ -88,6 +88,11 @@
                                 <Separator/>
                                 <MenuItem Header="Copy Path" Command="{Binding $parent[Window].DataContext.CopyPathCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
                                 <MenuItem Header="Reveal in OS" Command="{Binding $parent[Window].DataContext.RevealInOSCommand}" CommandParameter="{Binding $parent[TreeView].SelectedItem}"/>
+                                <Separator/>
+                                <MenuItem Header="Extensions">
+                                    <MenuItem Header="Echo hello here" Command="{Binding $parent[Window].DataContext.RunExtensionCommand}" CommandParameter="echo.hello"/>
+                                    <MenuItem Header="List extensions" Command="{Binding $parent[Window].DataContext.ListExtensionsCommand}"/>
+                                </MenuItem>
                             </ContextMenu>
                         </TreeView.ContextMenu>
                     </TreeView>
@@ -159,6 +164,43 @@
                             <TextBlock Text="PRIVACY" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
                             <TextBlock Text="Local only. Index stays in ./index. No upload." FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                             <Button Content="Delete local index" FontSize="11" Command="{Binding ClearIndexCommand}"/>
+                            <TextBlock Text="EXTENSIONS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="List" FontSize="11" Command="{Binding ListExtensionsCommand}"/>
+                                <Button Content="MCP" FontSize="11" Command="{Binding LoadMcpCommand}"/>
+                                <Button Content="Cloud" FontSize="11" Command="{Binding ToggleCloudCommand}"/>
+                            </StackPanel>
+                            <ListBox ItemsSource="{Binding ExtensionList}" Background="Transparent" MaxHeight="120">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" Width="140"/>
+                                            <TextBlock Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" Width="50"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="MCP SERVERS" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <ListBox ItemsSource="{Binding McpList}" SelectedItem="{Binding SelectedMcp}" Background="Transparent" MaxHeight="120">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource QuantAccent}" Width="140"/>
+                                            <TextBlock Text="{Binding Command}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Tools" FontSize="11" Command="{Binding ListMcpToolsCommand}"/>
+                                <Button Content="Dry run" FontSize="11" Command="{Binding DryRunMcpCommand}"/>
+                                <Button Content="Call" FontSize="11" Command="{Binding CallMcpToolCommand}"/>
+                            </StackPanel>
+                            <TextBox Text="{Binding McpToolName}" Watermark="tool.name" Padding="8,6"/>
+                            <TextBox Text="{Binding McpToolArgs}" Watermark="{}" Padding="8,6"/>
+                            <TextBlock Text="{Binding McpTools}" FontSize="11" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap" MaxHeight="120"/>
+                            <TextBlock Text="CLOUD (OPT-IN)" FontSize="11" LetterSpacing="1.5" Foreground="{DynamicResource QuantTextMuted}" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding CloudModel}" Watermark="gpt-4o-mini" Padding="8,6"/>
                         </StackPanel>
                     </ScrollViewer>
                     <ScrollViewer Grid.Row="1" IsVisible="{Binding ShowGit}">
@@ -226,6 +268,8 @@
                 <DockPanel Grid.Row="1" Margin="12,6,12,2">
                     <TextBlock Text="{Binding Breadcrumbs}" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Content="Preview" FontSize="11" Command="{Binding TogglePreviewCommand}" ToolTip.Tip="Toggle Markdown/HTML preview"/>
+                        <Button Content="Complete" FontSize="11" Command="{Binding ToggleCompleteCommand}" ToolTip.Tip="Toggle inline completion"/>
                         <Button Content="Save" FontSize="11" Command="{Binding SaveTabCommand}"/>
                         <Button Content="Save All" FontSize="11" Command="{Binding SaveAllTabsCommand}"/>
                         <Button Content="Close" FontSize="11" Command="{Binding CloseTabCommand}"/>
@@ -268,6 +312,7 @@
                         </StackPanel>
                         <ae:TextEditor Grid.Row="3" Margin="12,0,12,12"
                                        Name="Editor"
+                                       IsVisible="{Binding !PreviewMode}"
                                        ShowLineNumbers="True"
                                        FontFamily="Cascadia Code,Consolas,Monospace"
                                        FontSize="14"
@@ -275,6 +320,11 @@
                                        Foreground="{DynamicResource QuantTextPrimary}"
                                        HorizontalScrollBarVisibility="Auto"
                                        VerticalScrollBarVisibility="Auto"/>
+                        <Border Grid.Row="3" Margin="12,0,12,12" Padding="12,8" CornerRadius="8" Background="{DynamicResource QuantSurface1}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1" IsVisible="{Binding PreviewMode}">
+                            <ScrollViewer>
+                                <TextBlock Text="{Binding PreviewText}" FontSize="13" Foreground="{DynamicResource QuantTextPrimary}" TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                        </Border>
                     </Grid>
                 </Border>
                 <Grid Grid.Row="3" RowDefinitions="Auto,*" Background="{DynamicResource QuantSurface1}" IsVisible="{Binding BottomVisible}">
@@ -294,7 +344,13 @@
                     </StackPanel>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6" IsVisible="{Binding ShowTasksView}">
                         <Button Content="Load" FontSize="11" Command="{Binding LoadTasksCommand}"/>
-                        <TextBlock Text="tasks.json + one key build" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" VerticalAlignment="Center"/>
+                        <Button Content="Run" FontSize="11" Command="{Binding RunTaskCommand}"/>
+                        <Button Content="Launch" FontSize="11" Command="{Binding LoadLaunchesCommand}"/>
+                        <Button Content="Start" FontSize="11" Command="{Binding StartLaunchCommand}"/>
+                        <Button Content="Stop" FontSize="11" Command="{Binding StopLaunchCommand}"/>
+                        <Button Content="Template" FontSize="11" Command="{Binding WriteLaunchTemplateCommand}"/>
+                        <Button Content="Matcher" FontSize="11" Command="{Binding TestMatcherCommand}" ToolTip.Tip="Test problem matcher on sample"/>
+                        <Button Content="Copy fail" FontSize="11" Command="{Binding CopyFailureForChatCommand}" ToolTip.Tip="Copy failure output as chat context"/>
                     </StackPanel>
                     <Border Grid.Row="1" Padding="10,8" CornerRadius="8" Background="{DynamicResource QuantBgBase}" BorderBrush="{DynamicResource QuantBorderSubtle}" BorderThickness="1">
                         <Grid>
@@ -304,12 +360,22 @@
                         <ScrollViewer IsVisible="{Binding ShowTerminalView}" MaxHeight="140">
                             <TextBlock Text="{Binding TerminalOutput}" FontFamily="Cascadia Code,Consolas,Monospace" FontSize="12" Foreground="{DynamicResource QuantTextSecondary}" TextWrapping="Wrap"/>
                         </ScrollViewer>
-                        <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="140">
+                        <ListBox ItemsSource="{Binding Tasks}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource QuantTextPrimary}" Width="200"/>
                                         <TextBlock Text="{Binding Command}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <ListBox ItemsSource="{Binding Launches}" SelectedItem="{Binding SelectedLaunch}" IsVisible="{Binding ShowTasksView}" Background="Transparent" MaxHeight="80">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource QuantAccent}" Width="200"/>
+                                        <TextBlock Text="{Binding Args}" FontSize="11" Foreground="{DynamicResource QuantTextMuted}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

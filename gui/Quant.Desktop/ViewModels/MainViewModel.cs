@@ -69,6 +69,37 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<TerminalSession> Terminals { get; } = new();
     public ObservableCollection<GitFile> GitFiles { get; } = new();
     public ObservableCollection<GitLog> GitLogs { get; } = new();
+    public ObservableCollection<LaunchProfile> Launches { get; } = new();
+    public ObservableCollection<CommandItem> ExtMenu { get; } = new();
+    public ObservableCollection<ExtensionManifest> ExtensionList { get; } = new();
+    public ObservableCollection<McpServer> McpList { get; } = new();
+
+    [ObservableProperty]
+    public partial LaunchProfile? SelectedLaunch { get; set; }
+
+    [ObservableProperty]
+    public partial bool PreviewMode { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string PreviewText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool CloudEnabled { get; set; } = false;
+
+    [ObservableProperty]
+    public partial string CloudModel { get; set; } = "gpt-4o-mini";
+
+    [ObservableProperty]
+    public partial McpServer? SelectedMcp { get; set; }
+
+    [ObservableProperty]
+    public partial string McpTools { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string McpToolName { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string McpToolArgs { get; set; } = "{}";
 
     [ObservableProperty]
     public partial string GitBranch { get; set; } = "";
@@ -413,6 +444,18 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
+            // Phase 13.3 cloud opt-in route with triple guard. Default stays local.
+            var cloud = await TryCloudAsync(prompt, _chatCts.Token);
+            if (cloud != null)
+            {
+                assistant.Content = cloud;
+                var cidx = Messages.IndexOf(assistant);
+                Messages[cidx] = new ChatMessage { Role = "assistant", Content = cloud };
+                StatusText = "cloud connected";
+                PushToast("Reply ready", "Cloud reply completed", "");
+            }
+            else
+            {
             var ctx = ActiveTab?.Content ?? EditorText;
             if (Chips.Count > 0)
                 ctx += "\n\nAttached:\n" + string.Join("\n", System.Linq.Enumerable.Select(Chips, c => $"- {c.Kind} {c.Label}"));
@@ -431,6 +474,7 @@ public partial class MainViewModel : ViewModelBase
                 var once = await _engine.ChatOnceAsync(prompt, ctx, _chatCts.Token);
                 var idx = Messages.IndexOf(assistant);
                 Messages[idx] = new ChatMessage { Role = "assistant", Content = once };
+            }
             }
             StatusText = "engine connected";
             PushToast("Reply ready", "Assistant stream completed", "");
@@ -1123,9 +1167,10 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void DryRun()
     {
-        var prompt = $"chips={Chips.Count} tokens={TokenMeter} mode={ChatMode}";
+        var tools = string.Join(",", _extensions.ChatTools());
+        var prompt = $"chips={Chips.Count} tokens={TokenMeter} mode={ChatMode} tools=[{tools}] cloud={(CloudEnabled ? "opt-in" : "off")}";
         OutputLog += $"[dry-run] {prompt}\nInput: {InputText}\n";
-        PushToast("Dry run", prompt, "");
+        PushToast("Dry run", prompt.Length > 120 ? prompt[..120] : prompt, "");
     }
 
     // ---------- Phase 5.4 Slash ----------
@@ -1339,6 +1384,24 @@ public partial class MainViewModel : ViewModelBase
         if (card == null) return;
         try
         {
+            // MCP tools execute locally via stdio, no engine token needed.
+            if (card.Tool.StartsWith("mcp:", StringComparison.Ordinal))
+            {
+                var rest = card.Tool["mcp:".Length..];
+                var slash = rest.IndexOf('/');
+                var serverName = slash > 0 ? rest[..slash] : rest;
+                var tool = slash > 0 ? rest[(slash + 1)..] : "example.tool";
+                var server = System.Linq.Enumerable.FirstOrDefault(McpList, s => s.Name == serverName)
+                    ?? System.Linq.Enumerable.FirstOrDefault(_mcp.Servers, s => s.Name == serverName);
+                if (server == null) { PushToast("MCP missing", serverName, ""); return; }
+                var result = await _mcp.CallToolAsync(server, tool, card.Args);
+                card.Status = "approved";
+                OutputLog += $"[mcp] {serverName}/{tool} -> {(result.Length > 300 ? result[..300] : result)}\n";
+                PushToast("MCP done", $"{tool} returned {result.Length} chars", "");
+                Approvals.Remove(card);
+                if (Approvals.Count == 0) AgentStatus = "done";
+                return;
+            }
             using var svc = new AgentService(_baseUrl);
             var token = await svc.GrantAsync("workspace", card.Tool);
             card.Status = "approved";
@@ -1523,6 +1586,186 @@ public partial class MainViewModel : ViewModelBase
         Tabs.Add(tab);
         ActiveTab = tab;
         SyncEditorFromTab();
+    }
+
+    // ---------- Phase 12.1 Launch ----------
+    private readonly LaunchService _launch = new();
+
+    [RelayCommand]
+    private void LoadLaunches()
+    {
+        Launches.Clear();
+        _launch.Output += s => OutputLog += s;
+        foreach (var p in _launch.Load(_workspace.ActiveRoot ?? ".")) Launches.Add(p);
+        OutputLog += $"[launch] {Launches.Count} profiles\n";
+    }
+
+    [RelayCommand]
+    private void WriteLaunchTemplate()
+    {
+        _launch.WriteTemplate(_workspace.ActiveRoot ?? ".");
+        LoadLaunchesCommand.Execute(null);
+        PushToast("Template written", ".quant/launch.json", "");
+    }
+
+    [RelayCommand]
+    private void StartLaunch(LaunchProfile? p)
+    {
+        p ??= SelectedLaunch ?? System.Linq.Enumerable.FirstOrDefault(Launches);
+        if (p == null) return;
+        _launch.Output += s => OutputLog += s;
+        if (_launch.Start(p)) PushToast("Launched", p.Name, "");
+        else PushToast("Launch failed", p.Name, "");
+    }
+
+    [RelayCommand]
+    private void StopLaunch(LaunchProfile? p)
+    {
+        p ??= SelectedLaunch;
+        if (p == null) return;
+        _launch.Stop(p.Name);
+        p.Running = false;
+        PushToast("Stopped", p.Name, "");
+    }
+
+    // ---------- Phase 12.2 Preview ----------
+    [RelayCommand]
+    private void TogglePreview()
+    {
+        if (ActiveTab == null || !MarkdownService.IsPreviewable(ActiveTab.FilePath))
+        {
+            PushToast("Preview", "Open a .md or .html file first.", "");
+            return;
+        }
+        PreviewMode = !PreviewMode;
+        PreviewText = PreviewMode ? MarkdownService.ToPreview(ActiveTab.Content) : "";
+        OutputLog += $"[preview] {(PreviewMode ? "on" : "off")} {ActiveTab.Title}\n";
+    }
+
+    // ---------- Phase 12.3 Matchers ----------
+    [RelayCommand]
+    private void TestMatcher()
+    {
+        var sample = "src/App.cs(42,5): error CS1002: ; expected\nerror: failed -->\n src/main.rs:10:5";
+        var parsed = _problems.Parse(sample, "matcher-test");
+        PushToast("Matcher test", $"{parsed.Count} problems from sample", "");
+        OutputLog += $"[matcher] {parsed.Count} sample hits\n";
+    }
+
+    [RelayCommand]
+    private void CopyFailureForChat()
+    {
+        var text = ActiveTerminal?.Output.ToString() ?? OutputLog;
+        if (text.Length > 4000) text = text[^4000..];
+        Messages.Add(new ChatMessage { Role = "user", Content = "Failure output:\n" + text });
+        PushToast("Failure attached", "Terminal tail added to chat.", "");
+    }
+
+    // ---------- Phase 13 seams (deep) ----------
+    private readonly ExtensionHost _extensions = new();
+    private readonly McpService _mcp = new();
+    private readonly CloudProvider _cloud = new();
+
+    [RelayCommand]
+    private void ToggleCloud()
+    {
+        CloudEnabled = !CloudEnabled;
+        OutputLog += $"[cloud] {(CloudEnabled ? "opt-in requested (key " + _cloud.KeyPresent + ")" : "disabled")}\n";
+        if (CloudEnabled) PushToast("Cloud opt-in", "Key " + _cloud.KeyPresent + ". No traffic unless key present.", "");
+    }
+
+    // ---------- Phase 13 deep: extensions ----------
+    [RelayCommand]
+    private void ListExtensions()
+    {
+        _extensions.Load(_workspace.ActiveRoot ?? ".");
+        ExtensionList.Clear();
+        ExtMenu.Clear();
+        foreach (var m in _extensions.Manifests()) ExtensionList.Add(m);
+        foreach (var c in _extensions.AllCommands()) OutputLog += $"[ext] {c.Id} {c.Title}\n";
+        foreach (var c in _extensions.ExplorerMenu()) ExtMenu.Add(c);
+        var tools = string.Join(",", _extensions.ChatTools());
+        OutputLog += $"[ext] chat tools: {tools}\n";
+        PushToast("Extensions", $"{ExtensionList.Count} loaded. Menu {ExtMenu.Count}.", "");
+    }
+
+    [RelayCommand]
+    private void ToggleExtension(ExtensionManifest? m)
+    {
+        m ??= System.Linq.Enumerable.FirstOrDefault(ExtensionList);
+        if (m == null) return;
+        _extensions.SetEnabled(m.Id, !m.Enabled, _workspace.ActiveRoot ?? ".");
+        m.Enabled = !m.Enabled;
+        ListExtensionsCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void RunExtension(string id)
+    {
+        var target = string.IsNullOrWhiteSpace(id) ? "echo.hello" : id;
+        var path = SelectedNode?.FullPath ?? _workspace.ActiveRoot ?? ".";
+        var result = _extensions.Execute(target, path);
+        OutputLog += $"[ext] {target} -> {result}\n";
+        PushToast("Extension", result.Length > 120 ? result[..120] : result, "");
+    }
+
+    // ---------- Phase 13 deep: MCP ----------
+    [RelayCommand]
+    private void LoadMcp()
+    {
+        _mcp.Load(_workspace.ActiveRoot ?? ".");
+        McpList.Clear();
+        foreach (var s in _mcp.Servers) McpList.Add(s);
+        SelectedMcp ??= System.Linq.Enumerable.FirstOrDefault(McpList);
+        PushToast("MCP", $"{McpList.Count} servers. Disabled unless enabled in mcp.json.", "");
+        OutputLog += $"[mcp] {McpList.Count} servers\n{_mcp.Log}";
+    }
+
+    [RelayCommand]
+    private async Task ListMcpTools()
+    {
+        if (SelectedMcp == null) { PushToast("No server", "Load MCP first.", ""); return; }
+        McpTools = await _mcp.ListToolsAsync(SelectedMcp);
+        if (string.IsNullOrWhiteSpace(McpTools)) McpTools = $"(empty: {_mcp.LastError})";
+        OutputLog += $"[mcp] tools {SelectedMcp.Name} {McpTools.Length} chars\n";
+    }
+
+    [RelayCommand]
+    private void DryRunMcp()
+    {
+        if (SelectedMcp == null) return;
+        var payload = McpService.DryRunPayload(string.IsNullOrWhiteSpace(McpToolName) ? "example.tool" : McpToolName, McpToolArgs);
+        OutputLog += $"[mcp dry-run] {SelectedMcp.Name}\n{payload}\n";
+        PushToast("MCP dry run", "Payload in Output. Nothing executed.", "");
+    }
+
+    [RelayCommand]
+    private void CallMcpTool()
+    {
+        if (SelectedMcp == null) return;
+        var tool = string.IsNullOrWhiteSpace(McpToolName) ? "example.tool" : McpToolName;
+        Approvals.Add(new ApprovalCard { Id = System.Guid.NewGuid().ToString("N")[..8], Tool = $"mcp:{SelectedMcp.Name}/{tool}", Args = McpToolArgs.Length > 2000 ? McpToolArgs[..2000] : McpToolArgs, Reason = $"Run MCP tool {tool} on {SelectedMcp.Name} (10s timeout)" });
+        AgentStatus = "awaiting approval";
+        PushToast("Approval needed", $"mcp {tool}", "");
+    }
+
+    // ---------- Phase 13 deep: cloud route ----------
+    private async Task<string?> TryCloudAsync(string message, System.Threading.CancellationToken ct)
+    {
+        if (!CloudEnabled) return null;
+        var key = KeyStore.Read();
+        if (string.IsNullOrEmpty(key)) { OutputLog += "[cloud] enabled but key missing, staying local\n"; return null; }
+        try
+        {
+            using var provider = new OpenAiCompatProvider { Model = string.IsNullOrWhiteSpace(CloudModel) ? "gpt-4o-mini" : CloudModel };
+            OutputLog += $"[cloud] {provider.CostFor(message.Length / 4)}\n";
+            return await provider.ChatAsync(message, ct);
+        }
+        catch (System.Exception ex)
+        {
+            OutputLog += $"[cloud] error {ex.Message}, falling back to local\n";
+            return null;
+        }
     }
 
     // ---------- Phase 10.2 Ghost ----------
